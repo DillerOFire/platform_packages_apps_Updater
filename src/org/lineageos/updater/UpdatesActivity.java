@@ -640,13 +640,21 @@ public class UpdatesActivity extends AppCompatActivity {
                 if (prefs.getInt("earlyUpdates", 0) <= 0)
                     android_id = "0";
 
-                long buildIncremental = 0;
-                buildIncremental = Long.parseLong(SystemProperties.get("ro.build.date.utc"));
+                long buildTimestamp = Long.parseLong(SystemProperties.get("ro.build.date.utc"));
+                long buildIncremental;
+                try {
+                    buildIncremental = Long.parseLong(SystemProperties.get("ro.build.version.incremental"));
+                } catch (Exception e) {
+                    Log.d(TAG, "Failed to parse ro.build.version.incremental, is this an official build?");
+                    buildIncremental = 0;
+                    exception = null;
+                }
 
                 DeviceState.Builder request = DeviceState.newBuilder();
                 request.addDevice(SystemProperties.get("ro.product.vendor.device"));
                 request.addBuild(SystemProperties.get("ro.vendor.build.fingerprint"));
                 request.setBuildIncremental(buildIncremental);
+                request.setTimestamp(buildTimestamp);
                 request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
                 request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
                 request.setHwId(android_id);
