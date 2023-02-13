@@ -87,6 +87,7 @@ public class UpdatesActivity extends AppCompatActivity {
     private String updateId = "";
     private Boolean wasUpdating = false;
     private Boolean updateCheck = false;
+    private Boolean installingUpdate = false;
     private int htmlColor = 0;
     private String htmlCurrentBuild = "";
     private String htmlChangelog = "";
@@ -138,20 +139,22 @@ public class UpdatesActivity extends AppCompatActivity {
     }
 
     public void renderPage(String pageId) {
-        if (mUpdaterController != null) {
-                if (!(mUpdaterController.isDownloading(updateId) || // Check if the update is downloading
-                        mUpdaterController.isVerifyingUpdate(updateId) || // Check if the update is being verified
-                        mUpdaterController.isInstallingUpdate(updateId) || // Check if the update is being installed
-                        mUpdaterController.isWaitingForReboot(updateId))) { // Check if the update is waiting for reboot
+        if (mUpdaterController != null && !installingUpdate) {
+            Log.d(TAG, "UpdateController status is: " + mUpdaterController.getUpdate(updateId));
+            if (!(mUpdaterController.isDownloading(updateId) ||
+                    mUpdaterController.isVerifyingUpdate(updateId) ||
+                    mUpdaterController.isInstallingUpdate(updateId) ||
+                    mUpdaterController.isWaitingForReboot(updateId))) {
 
-                    Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
-                    // Check if the page id is either "updateInstalling" or "updateInstalled"
-                    if (pageId == "updateInstalling" || pageId == "updateInstalled") {
-                        Log.d(TAG, "Invalid state detected, returning to initial page");
-                        prefsEditor.clear().commit(); // Clear the preferences editor
-                        pageId = "checkForUpdates"; // Set the page id to "updateChecking"
-                    }
+                Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
+                if (pageId.equals("updateInstalling") ||
+                        pageId.equals("updateInstallingPaused") ||
+                        pageId.equals("updateInstalled")) {
+                    Log.d(TAG, "Invalid state detected, returning to initial page");
+                    prefsEditor.clear().apply(); // Clear the preferences editor
+                    pageId = "checkForUpdates"; // Set the page id to "updateChecking"
                 }
+            }
         }
 
         Log.d(TAG, "Render page: " + pageId);
@@ -173,7 +176,7 @@ public class UpdatesActivity extends AppCompatActivity {
         if (!Objects.equals(pageIdActive, "error")) {
             //Log.d(TAG, "Saving pageId " + pageIdActive);
             prefsEditor.putString("pageId", pageIdActive).apply();
-            prefsEditor.commit();
+            prefsEditor.apply();
         }
 
         page.render(this);
@@ -183,26 +186,21 @@ public class UpdatesActivity extends AppCompatActivity {
             thread.start();
         }
     }
+
     public void renderPageProgress(String pageId, int progress, String progressStep) {
-        if (!Objects.equals(pageId, pageIdActive))
-            return;
         Page page = getPage(pageId);
 
-        if (progress < 0) {
-            progress = 1;
-            progressBar.setIndeterminate(true);
-        } else {
-            progressBar.setIndeterminate(false);
-        }
+        progressBar.setIndeterminate(false);
         page.progPercent = progress;
         page.progStep = progressStep;
 
         prefsEditor.putInt("progPercent", page.progPercent);
         prefsEditor.putString("progStep", page.progStep);
-        prefsEditor.commit();
+        prefsEditor.apply();
 
         renderPage(pageId);
     }
+
     public void renderPageCustom(String pageId, Page page) {
         registerPage(pageId, page);
         renderPage(pageId);
@@ -283,7 +281,7 @@ public class UpdatesActivity extends AppCompatActivity {
         wasUpdating = prefs.getBoolean("updating", false);
         Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
         pageIdActive = prefs.getString("pageId", "updateChecking");
-        if (!wasUpdating && pageIdActive.equals("updateAvailable"))
+        if (!wasUpdating && pageIdActive.equals("updateAvailable") && !installingUpdate)
             pageIdActive = "checkForUpdates"; //Check for updates on next start!
         Log.d(TAG, "Loading pageId " + pageIdActive);
         htmlChangelog = prefs.getString("changelog", "");
@@ -310,14 +308,20 @@ public class UpdatesActivity extends AppCompatActivity {
             public void onStatusUpdate(int status, float percent) {
                 switch (status) {
                     case UpdateEngine.UpdateStatusConstants.DOWNLOADING:
+                        installingUpdate = true;
                         Log.d(TAG, "UpdateEngine: DOWNLOADING");
-                        renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_installing_title_text));
+                        pageIdActive = prefs.getString("pageId", "");
+                        if (!pageIdActive.equals("updateInstallingPaused")) {
+                            renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_installing_title_text));
+                        }
                         break;
                     case UpdateEngine.UpdateStatusConstants.FINALIZING:
+                        installingUpdate = true;
                         Log.d(TAG, "UpdateEngine: FINALIZING");
                         renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_optimizing_apps));
                         break;
                     case UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT:
+                        installingUpdate = false;
                         Log.d(TAG, "UpdateEngine: UPDATED_NEED_REBOOT");
                         renderPage("updateInstalled");
                         break;
@@ -344,20 +348,25 @@ public class UpdatesActivity extends AppCompatActivity {
                 if (UpdaterController.ACTION_UPDATE_STATUS.equals(intent.getAction())) {
                     switch (update.getStatus()) {
                         case PAUSED_ERROR:
+                            installingUpdate = false;
                             renderPage("updateRetryDownload");
                             break;
                         case VERIFICATION_FAILED:
+                            installingUpdate = false;
                             Page page = getPage("updateRetryDownload");
                             page.strStatus = getString(R.string.snack_download_verification_failed);
                             renderPage("updateRetryDownload");
                             break;
                         case INSTALLATION_FAILED:
+                            installingUpdate = false;
                             renderPage("updateInstallFailed");
                             break;
                         case VERIFIED:
+                            installingUpdate = true;
                             install();
                             break;
                         case INSTALLED:
+                            installingUpdate = false;
                             renderPage("updateInstalled");
                             break;
                     }
@@ -539,18 +548,22 @@ public class UpdatesActivity extends AppCompatActivity {
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.progPercent = prefs.getInt("progPercent", 0);
         page.progStep = prefs.getString("progStep", "");
-        page.btnExtraText = getString(R.string.system_update_download_pause_button);
-        page.btnExtraClickListener = v -> {
-            installPause();
-        };
+        if (Utils.isABDevice()) {
+            page.btnExtraText = getString(R.string.system_update_download_pause_button);
+            page.btnExtraClickListener = v -> {
+                installPause();
+            };
+        }
         page.htmlContent = htmlChangelog;
         page.htmlColor = htmlColor;
         return page;
     }
 
     private Page pageUpdateInstallingPaused() {
-        Page page = pageUpdateInstalling();
+        Page page = new Page();
         page.icon = R.drawable.ic_system_update_dl;
+        page.progPercent = prefs.getInt("progPercent", 0);
+        page.progStep = prefs.getString("progStep", "");
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.btnExtraText = getString(R.string.system_update_download_resume_button);
         page.btnExtraClickListener = v -> {
@@ -563,14 +576,6 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateInstalled() {
         Page page = new Page();
-        page.runnable = new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG, "Clearing pageId now that update is installed");
-                prefsEditor.clear().commit(); //Clear the preferences of everything for now, not needed for single builds
-                //TODO: For multi-build support where user selects build, remove just that build from prefs
-            }
-        };
         page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_notification_message_pending_reboot_finish_updating);
         page.btnPrimaryText = getString(R.string.system_update_restart_now);
@@ -602,13 +607,13 @@ public class UpdatesActivity extends AppCompatActivity {
         page.btnPrimaryText = getString(R.string.system_update_enroll_early_release_accept_button);
         page.btnPrimaryClickListener = v -> {
             prefsEditor.putInt("earlyUpdates", 1).apply();
-            prefsEditor.commit();
+            prefsEditor.apply();
             renderPage("checkForUpdates");
         };
         page.btnExtraText = getString(R.string.system_update_enroll_early_release_reject_button);
         page.btnExtraClickListener = v -> {
             prefsEditor.putInt("earlyUpdates", 0).apply();
-            prefsEditor.commit();
+            prefsEditor.apply();
             renderPage("checkForUpdates");
         };
         page.htmlContent = getString(R.string.system_update_enroll_early_release_terms);
@@ -708,7 +713,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
                     Log.d(TAG, "Saving update for " + updateId);
                     prefsEditor.putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply();
-                    prefsEditor.commit();
+                    prefsEditor.apply();
                 } catch (Exception e) {
                     Log.e(TAG, "Error while parsing updates proto: " + e);
                     exception = e;
@@ -748,7 +753,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
                 Log.d(TAG, "Saving changelog");
                 prefsEditor.putString("changelog", htmlChangelog).apply();
-                prefsEditor.commit();
+                prefsEditor.apply();
 
                 setUpdating(true);
 
@@ -787,7 +792,7 @@ public class UpdatesActivity extends AppCompatActivity {
         mUpdaterController.deleteUpdate(updateId);
         prefsEditor.putInt("progPercent", 0).apply();
         prefsEditor.putString("progStep", "").apply();
-        prefsEditor.commit();
+        prefsEditor.apply();
         renderPage("updateAvailable");
     }
 
@@ -817,6 +822,7 @@ public class UpdatesActivity extends AppCompatActivity {
     private void installPause() {
         Log.d(TAG, "Pausing update installation!");
         setUpdating(true);
+        progressBar.setIndeterminate(true);
         renderPage("updateInstallingPaused");
         mUpdateEngine.suspend();
     }
@@ -824,6 +830,7 @@ public class UpdatesActivity extends AppCompatActivity {
     private void installResume() {
         Log.d(TAG, "Resuming update installation!");
         setUpdating(true);
+        progressBar.setIndeterminate(false);
         renderPage("updateInstalling");
         mUpdateEngine.resume();
     }
@@ -839,7 +846,7 @@ public class UpdatesActivity extends AppCompatActivity {
         wasUpdating = updating;
         Log.d(TAG, "Set updating: " + updating);
         prefsEditor.putBoolean("updating", updating).apply();
-        prefsEditor.commit();
+        prefsEditor.apply();
     }
 
     @Override
@@ -865,7 +872,7 @@ public class UpdatesActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "Committing preferences before close");
-        prefsEditor.commit(); //Make sure we commit preferences no matter what
+        prefsEditor.apply(); //Make sure we commit preferences no matter what
 
         super.onStop();
     }
