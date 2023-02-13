@@ -281,7 +281,6 @@ public class UpdaterController {
         } catch (Exception e) {
             Log.e(TAG, "Verification failed", e);
             if (file.exists()) {
-                //noinspection ResultOfMethodCallIgnored
                 file.delete();
             } else {
                 // The download was probably stopped. Exit silently
@@ -544,12 +543,5 @@ public class UpdaterController {
 
     public boolean isWaitingForReboot(String downloadId) {
         return ABUpdateInstaller.isWaitingForReboot(mContext, downloadId);
-    }
-
-    public void setPerformanceMode(boolean enable) {
-        /*if (!Utils.isABDevice()) {
-            return;
-        }
-        ABUpdateInstaller.getInstance(mContext, this).setPerformanceMode(enable);*/
     }
 }

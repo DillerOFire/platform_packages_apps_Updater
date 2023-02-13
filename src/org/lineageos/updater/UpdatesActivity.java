@@ -117,8 +117,9 @@ public class UpdatesActivity extends AppCompatActivity {
             }
 
             Log.d(TAG, "PageHandler: Update is null");
-            if (pageIdActive.isEmpty())
+            if (pageIdActive.isEmpty()) {
                 pageIdActive = "updateChecking";
+            }
             return pageIdActive;
         }
 
@@ -134,8 +135,25 @@ public class UpdatesActivity extends AppCompatActivity {
         //Log.d(TAG, "Get page: " + pageId);
         return pages.get(pageId);
     }
+
     public void renderPage(String pageId) {
-        //Log.d(TAG, "Render page: " + pageId);
+        if (mUpdaterController != null) {
+                if (!(mUpdaterController.isDownloading(updateId) || // Check if the update is downloading
+                        mUpdaterController.isVerifyingUpdate(updateId) || // Check if the update is being verified
+                        mUpdaterController.isInstallingUpdate(updateId) || // Check if the update is being installed
+                        mUpdaterController.isWaitingForReboot(updateId))) { // Check if the update is waiting for reboot
+
+                    Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
+                    // Check if the page id is either "updateInstalling" or "updateInstalled"
+                    if (pageId == "updateInstalling" || pageId == "updateInstalled") {
+                        Log.d(TAG, "Invalid state detected, returning to initial page");
+                        prefsEditor.clear().commit(); // Clear the preferences editor
+                        pageId = "checkForUpdates"; // Set the page id to "updateChecking"
+                    }
+                }
+        }
+
+        Log.d(TAG, "Render page: " + pageId);
 
         if (!Objects.equals(pageIdActive, "") && !Objects.equals(pageIdActive, pageId)) {
             Page pageLast = getPage(pageIdActive);
@@ -344,17 +362,8 @@ public class UpdatesActivity extends AppCompatActivity {
                     }
                 } else if (UpdaterController.ACTION_DOWNLOAD_PROGRESS.equals(intent.getAction())) {
                     registerPage("updateDownloading", pageUpdateDownloading());
-                    String percentage = NumberFormat.getPercentInstance().format(update.getProgress() / 100.f);
-                    String speed = Formatter.formatFileSize(activity, update.getSpeed());
 
-                    String progStep = percentage + " • ";
-                    if (update.getEta() > 0) {
-                        CharSequence etaString = StringGenerator.formatETA(activity, update.getEta() * 1000);
-                        progStep += etaString;
-                    } else {
-                        progStep += getString(R.string.system_update_download_eta_calculating);
-                    }
-                    progStep += " • " + speed + "/s";
+                    String progStep = getString(R.string.system_update_system_update_downloading_title_text);
 
                     if (Objects.equals(pageIdActive, "updateDownloading"))
                         renderPageProgress("updateDownloading", update.getProgress(), progStep);
@@ -513,7 +522,7 @@ public class UpdatesActivity extends AppCompatActivity {
         page.btnPrimaryText = getString(R.string.system_update_download_retry_button_text);
         page.icon = R.drawable.ic_system_update_error;
         page.btnPrimaryClickListener = v -> {
-            downloadResume();
+            download();
         };
 
         String percentage = NumberFormat.getPercentInstance().format(page.progPercent / 100.f);
@@ -752,6 +761,13 @@ public class UpdatesActivity extends AppCompatActivity {
     }
 
     private void download() {
+        if (update != null) {
+            File oldFile = update.getFile();
+            if (oldFile != null) {
+                oldFile.delete();
+            }
+        }
+
         //Reset the page entirely
         registerPage("updateDownloading", pageUpdateDownloading());
         renderPage("updateDownloading");
