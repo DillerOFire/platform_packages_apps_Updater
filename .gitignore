@@ -5,6 +5,7 @@
 .DS_Store
 /build
 /captures
+/gen-src
 /gradle
 /gradlew
 /gradlew.bat
