@@ -93,7 +93,7 @@ public class UpdaterService extends Service {
         mNotificationManager.createNotificationChannel(notificationChannel);
         mNotificationBuilder = new NotificationCompat.Builder(this,
                 ONGOING_NOTIFICATION_CHANNEL);
-        mNotificationBuilder.setSmallIcon(R.drawable.ic_system_update);
+        mNotificationBuilder.setSmallIcon(R.drawable.ic_system_update_dl);
         mNotificationBuilder.setShowWhen(false);
         mNotificationStyle = new NotificationCompat.BigTextStyle();
         mNotificationBuilder.setStyle(mNotificationStyle);
@@ -267,11 +267,11 @@ public class UpdaterService extends Service {
                 stopForeground(STOP_FOREGROUND_DETACH);
                 mNotificationBuilder.mActions.clear();
                 mNotificationBuilder.setStyle(null);
-                mNotificationBuilder.setSmallIcon(R.drawable.ic_system_update);
+                mNotificationBuilder.setSmallIcon(R.drawable.ic_system_update_dl);
                 mNotificationBuilder.setProgress(0, 0, false);
                 String text = getString(R.string.installing_update_finished);
                 mNotificationBuilder.setContentText(text);
-                mNotificationBuilder.addAction(R.drawable.ic_system_update,
+                mNotificationBuilder.addAction(R.drawable.ic_system_update_dl,
                         getString(R.string.reboot),
                         getRebootPendingIntent());
                 mNotificationBuilder.setTicker(text);

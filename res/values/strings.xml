@@ -129,7 +129,7 @@
     <string name="system_update_restart_now">Restart now</string>
     <string name="system_update_resume_button_text">Resume</string>
     <string name="system_update_system_update_downloading_title_text">System update downloading…</string>
-    <string name="system_update_update_available_title_text">System update available</string>
+    <string name="system_update_update_available_title_text">Update available</string>
     <string name="system_update_update_checking">Checking for updates…</string>
     <string name="system_update_update_failed">Try again</string>
     <string name="system_update_update_now">Download &amp; install</string>

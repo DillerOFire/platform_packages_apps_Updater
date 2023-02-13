@@ -411,7 +411,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 Log.d(TAG, "This is the error code!");
             }
         };
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_error;
         page.strTitle = "ERROR";
         page.strStatus = "An unhandled exception has occurred";
         page.btnPrimaryText = "Try again";
@@ -429,7 +429,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageCheckForUpdates() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_check;
         page.strStatus = getString(R.string.system_update_no_update_content_text);
         page.btnPrimaryText = getString(R.string.system_update_check_now_button_text);
         page.btnPrimaryClickListener = v -> {
@@ -448,14 +448,14 @@ public class UpdatesActivity extends AppCompatActivity {
                 renderPageProgress("updateChecking", -1, "");
             }
         };
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_check;
         page.strStatus = getString(R.string.system_update_update_checking);
         return page;
     }
 
     private Page pageUpdateAvailable() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_update_available_title_text);
         page.btnPrimaryText = getString(R.string.system_update_update_now);
         page.btnPrimaryClickListener = v -> {
@@ -468,7 +468,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateStarting() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = "Starting...";
         page.htmlContent = htmlChangelog;
         page.htmlColor = htmlColor;
@@ -477,7 +477,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateDownloading() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.btnPrimaryText = getString(R.string.system_update_download_pause_button);
         page.btnPrimaryClickListener = v -> {
@@ -496,7 +496,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdatePaused() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_notification_title_update_paused);
         page.btnPrimaryText = getString(R.string.system_update_resume_button_text);
         page.btnPrimaryClickListener = v -> {
@@ -534,7 +534,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateInstalling() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.progPercent = prefs.getInt("progPercent", 0);
         page.progStep = prefs.getString("progStep", "");
@@ -549,7 +549,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateInstallingPaused() {
         Page page = pageUpdateInstalling();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.btnExtraText = getString(R.string.system_update_download_resume_button);
         page.btnExtraClickListener = v -> {
@@ -570,7 +570,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 //TODO: For multi-build support where user selects build, remove just that build from prefs
             }
         };
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_notification_message_pending_reboot_finish_updating);
         page.btnPrimaryText = getString(R.string.system_update_restart_now);
         page.btnPrimaryClickListener = v -> {
@@ -583,7 +583,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageUpdateInstallFailed() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_failure;
         page.strStatus = getString(R.string.system_update_install_failed_title_text);
         page.btnPrimaryText = getString(R.string.system_update_update_failed);
         page.btnPrimaryClickListener = v -> {
@@ -596,7 +596,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageEarlyUpdates() {
         Page page = new Page();
-        page.icon = R.drawable.ic_google_system_update;
+        page.icon = R.drawable.ic_system_update_dl;
         page.strStatus = getString(R.string.system_update_enroll_early_release);
         page.btnPrimaryText = getString(R.string.system_update_enroll_early_release_accept_button);
         page.btnPrimaryClickListener = v -> {
