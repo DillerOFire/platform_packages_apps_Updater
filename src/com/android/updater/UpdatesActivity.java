@@ -566,7 +566,7 @@ public class UpdatesActivity extends AppCompatActivity {
         Page page = new Page();
         page.icon = R.drawable.ic_system_update_dl;
         page.progPercent = prefs.getInt("progPercent", 0);
-        page.progStep = prefs.getString("progStep", "");
+        page.progStep = getString(R.string.system_update_notification_title_update_paused);
         page.strStatus = getString(R.string.system_update_installing_title_text);
         page.btnExtraText = getString(R.string.system_update_download_resume_button);
         page.btnExtraClickListener = v -> {
