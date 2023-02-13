@@ -139,7 +139,7 @@ public class Page {
                                 mContext.webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
                                 mContext.webView.setBackgroundColor(Color.TRANSPARENT);
                             }
-
+                            mContext.webView.getSettings().setBuiltInZoomControls(false);
                             mContext.webView.setVisibility(View.VISIBLE);
                         }
                     }
