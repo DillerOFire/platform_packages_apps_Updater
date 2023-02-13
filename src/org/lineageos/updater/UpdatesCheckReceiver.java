@@ -30,20 +30,14 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
-import org.lineageos.updater.download.DownloadClient;
-import org.lineageos.updater.misc.Constants;
 import org.lineageos.updater.misc.Utils;
 import org.lineageos.updater.protos.OtaMetadata;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
-import java.util.Objects;
-import java.util.UUID;
 
 public class UpdatesCheckReceiver extends BroadcastReceiver {
 

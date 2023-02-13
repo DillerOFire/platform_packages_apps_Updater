@@ -15,35 +15,23 @@
  */
 package org.lineageos.updater.controller;
 
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.text.format.Formatter;
 import android.util.Log;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.preference.PreferenceManager;
 
-import org.lineageos.updater.R;
-import org.lineageos.updater.UpdaterReceiver;
-import org.lineageos.updater.UpdatesActivity;
-import org.lineageos.updater.misc.BuildInfoUtils;
-import org.lineageos.updater.misc.Constants;
-import org.lineageos.updater.misc.StringGenerator;
 import org.lineageos.updater.misc.Utils;
 import org.lineageos.updater.model.UpdateInfo;
 import org.lineageos.updater.model.UpdateStatus;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.NumberFormat;
 
 public class UpdaterService extends Service {
 
