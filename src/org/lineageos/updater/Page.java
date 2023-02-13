@@ -163,27 +163,7 @@ public class Page {
                     clickListener.onClick(v);
                     return;
                 }
-
-                Boolean enabled1 = activity.btnPrimary.isEnabled();
-                Boolean enabled2 = activity.btnSecondary.isEnabled();
-                Boolean enabled3 = activity.btnExtra.isEnabled();
-                activity.btnPrimary.setEnabled(false);
-                activity.btnSecondary.setEnabled(false);
-                activity.btnExtra.setEnabled(false);
-
-                try {
-                    Thread.sleep(250);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
                 clickListener.onClick(v);
-
-                if (enabled1)
-                    activity.btnPrimary.setEnabled(true);
-                if (enabled2)
-                    activity.btnSecondary.setEnabled(true);
-                if (enabled3)
-                    activity.btnExtra.setEnabled(true);
             }
         });
     }
