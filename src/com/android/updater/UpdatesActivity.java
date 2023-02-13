@@ -197,7 +197,12 @@ public class UpdatesActivity extends AppCompatActivity {
     public void renderPageProgress(String pageId, int progress, String progressStep) {
         Page page = getPage(pageId);
 
-        progressBar.setIndeterminate(false);
+        if (progress < 0) {
+            progress = 1;
+            progressBar.setIndeterminate(true);
+        } else {
+            progressBar.setIndeterminate(false);
+        }
         page.progPercent = progress;
         page.progStep = progressStep;
 
