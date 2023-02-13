@@ -743,7 +743,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 }
 
                 htmlChangelog += "<br /><br />";
-                htmlChangelog += "Update size: " + Formatter.formatShortFileSize(activity, update.getFileSize());
+                htmlChangelog += "Update size: " + Formatter.formatShortFileSize(activity, update.getFileSize()*-1); // TEMP, until we figure out why filesizebytes is returning negative numbers
 
                 Log.d(TAG, "Saving changelog");
                 prefsEditor.putString("changelog", htmlChangelog).apply();
