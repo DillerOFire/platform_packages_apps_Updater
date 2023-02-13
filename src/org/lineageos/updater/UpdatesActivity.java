@@ -630,7 +630,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try  {
-                Thread.sleep(500);
+                Thread.sleep(1500);
 
                 String urlOTA = Utils.getServerURL(this);
                 URL url = new URL(urlOTA);
