@@ -658,6 +658,17 @@ public class UpdatesActivity extends AppCompatActivity {
                 request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
                 request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
                 request.setHwId(android_id);
+
+                Boolean testing = true;
+                if (BuildConfig.DEBUG && testing) {
+                    request.clearDevice();
+                    request.clearBuild();
+                    request.clearTimestamp();
+                    request.addDevice("alioth");
+                    request.addBuild("Redmi/alioth/alioth:13/TQ1A.230205.002/23020840:user/release-keys");
+                    request.setTimestamp(1665584742);
+                }
+
                 DeviceState req = request.build();
 
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
