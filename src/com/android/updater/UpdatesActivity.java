@@ -118,10 +118,17 @@ public class UpdatesActivity extends AppCompatActivity {
                 }
             }
 
-            Log.d(TAG, "PageHandler: Update is null");
-            if (pageIdActive.isEmpty()) {
-                pageIdActive = "updateChecking";
-            }
+            new Thread(() -> {
+                try {
+                    Thread.sleep(200);
+                    if (!installingUpdate && pageIdActive.isEmpty()) {
+                        Log.d(TAG, "PageHandler: Update is null");
+                        pageIdActive = "updateChecking";
+                    }
+                } catch (Exception e) {
+                    pageIdActive = "updateChecking";
+                }
+            });
             return pageIdActive;
         }
 
@@ -324,7 +331,7 @@ public class UpdatesActivity extends AppCompatActivity {
                         }
                         break;
                     case UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT:
-                        installingUpdate = false;
+                        installingUpdate = true;
                         Log.d(TAG, "UpdateEngine: UPDATED_NEED_REBOOT");
                         renderPage("updateInstalled");
                         break;
@@ -369,7 +376,7 @@ public class UpdatesActivity extends AppCompatActivity {
                             install();
                             break;
                         case INSTALLED:
-                            installingUpdate = false;
+                            installingUpdate = true;
                             renderPage("updateInstalled");
                             break;
                     }
