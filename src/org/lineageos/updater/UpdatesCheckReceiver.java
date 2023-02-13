@@ -34,7 +34,7 @@ import org.json.JSONException;
 import org.lineageos.updater.download.DownloadClient;
 import org.lineageos.updater.misc.Constants;
 import org.lineageos.updater.misc.Utils;
-import org.lineageos.updater.protos.Build;
+import org.lineageos.updater.protos.OtaMetadata;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -87,13 +87,9 @@ public class UpdatesCheckReceiver extends BroadcastReceiver {
 
             InputStream in = new BufferedInputStream(urlConnection.getInputStream());
             byte[] buildBytes = in.readAllBytes();
-            Build build = org.lineageos.updater.protos.Build.parseFrom(buildBytes);
-            if (Objects.equals(build.getVersion(), "")) {
-                Log.d(TAG, "Failed to find version in updates proto");
-                return;
-            }
+            OtaMetadata build = org.lineageos.updater.protos.OtaMetadata.parseFrom(buildBytes);
 
-            Log.d(TAG, "Saving update for " + build.getSha256());
+            Log.d(TAG, "Saving update for " + build.getOriginalFilename());
             preferences.edit().putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply();
             preferences.edit().commit();
         } catch (Exception e) {

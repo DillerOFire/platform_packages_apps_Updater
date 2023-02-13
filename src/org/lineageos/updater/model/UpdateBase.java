@@ -21,9 +21,10 @@ public class UpdateBase implements UpdateBaseInfo {
     private String mDownloadUrl;
     private String mDownloadId;
     private long mTimestamp;
-    private String mType;
+    private int mType;
     private String mVersion;
     private long mFileSize;
+    private String mChangelogUrl;
 
     public UpdateBase() {
     }
@@ -66,11 +67,11 @@ public class UpdateBase implements UpdateBaseInfo {
     }
 
     @Override
-    public String getType() {
+    public int getType() {
         return mType;
     }
 
-    public void setType(String type) {
+    public void setType(int type) {
         mType = type;
     }
 
@@ -99,5 +100,14 @@ public class UpdateBase implements UpdateBaseInfo {
 
     public void setFileSize(long fileSize) {
         mFileSize = fileSize;
+    }
+
+    @Override
+    public String getChangelogUrl() {
+        return mChangelogUrl;
+    }
+
+    public void setChangelogUrl(String changelogUrl) {
+        mChangelogUrl = changelogUrl;
     }
 }

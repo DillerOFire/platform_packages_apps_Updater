@@ -143,7 +143,7 @@ public class UpdatesDbHelper extends SQLiteOpenHelper {
                 index = cursor.getColumnIndex(UpdateEntry.COLUMN_NAME_TIMESTAMP);
                 update.setTimestamp(cursor.getLong(index));
                 index = cursor.getColumnIndex(UpdateEntry.COLUMN_NAME_TYPE);
-                update.setType(cursor.getString(index));
+                update.setType(cursor.getInt(index));
                 index = cursor.getColumnIndex(UpdateEntry.COLUMN_NAME_VERSION);
                 update.setVersion(cursor.getString(index));
                 index = cursor.getColumnIndex(UpdateEntry.COLUMN_NAME_STATUS);

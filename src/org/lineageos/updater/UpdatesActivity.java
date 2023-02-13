@@ -16,8 +16,10 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.StrictMode;
+import android.os.SystemProperties;
 import android.os.UpdateEngine;
 import android.os.UpdateEngineCallback;
+import android.provider.Settings;
 import android.text.format.Formatter;
 import android.util.Base64;
 import android.util.Log;
@@ -45,7 +47,8 @@ import org.lineageos.updater.model.Update;
 import org.lineageos.updater.model.UpdateBaseInfo;
 import org.lineageos.updater.model.UpdateInfo;
 import org.lineageos.updater.model.UpdateStatus;
-import org.lineageos.updater.protos.BuildProtos;
+import org.lineageos.updater.protos.DeviceState;
+import org.lineageos.updater.protos.OtaMetadata;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -89,7 +92,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     //Special details
     private UpdateInfo update;
-    private org.lineageos.updater.protos.Build build;
+    private org.lineageos.updater.protos.OtaMetadata build;
     private String updateId = "";
     private Boolean wasUpdating = false;
     private Boolean updateCheck = false;
@@ -258,7 +261,7 @@ public class UpdatesActivity extends AppCompatActivity {
             if (!buildB64.equals("")) {
                 try {
                     byte[] buildBytes = Base64.decode(buildB64, Base64.DEFAULT);
-                    build = org.lineageos.updater.protos.Build.parseFrom(buildBytes);
+                    build = org.lineageos.updater.protos.OtaMetadata.parseFrom(buildBytes);
                     update = Utils.parseProtoUpdate(build);
                     updateId = update.getDownloadId();
                 } catch (InvalidProtocolBufferException e) {
@@ -631,16 +634,39 @@ public class UpdatesActivity extends AppCompatActivity {
 
                 String urlOTA = Utils.getServerURL(this);
                 URL url = new URL(urlOTA);
+
+                String android_id = Settings.Secure.getString(getContentResolver(),
+                        Settings.Secure.ANDROID_ID);
+                if (prefs.getInt("earlyUpdates", 0) <= 0)
+                    android_id = "0";
+
+                long buildIncremental = 0;
+                buildIncremental = Long.parseLong(SystemProperties.get("ro.build.date.utc"));
+
+                DeviceState.Builder request = DeviceState.newBuilder();
+                request.addDevice(SystemProperties.get("ro.product.vendor.device"));
+                request.addBuild(SystemProperties.get("ro.vendor.build.fingerprint"));
+                request.setBuildIncremental(buildIncremental);
+                request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
+                request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
+                request.setHwId(android_id);
+                DeviceState req = request.build();
+
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setDoOutput(true);
+                urlConnection.setDoInput(true);
+                urlConnection.setRequestMethod("POST");
+                try {
+                    req.writeTo(this.openFileOutput("config.txt", Context.MODE_PRIVATE));
+                }
+                catch (IOException e) {
+                    Log.e("Exception", "File write failed: " + e.toString());
+                }
+                req.writeTo(urlConnection.getOutputStream());
 
                 InputStream in = new BufferedInputStream(urlConnection.getInputStream());
                 byte[] buildBytes = in.readAllBytes();
-                build = org.lineageos.updater.protos.Build.parseFrom(buildBytes);
-                if (Objects.equals(build.getVersion(), "")) {
-                    Log.d(TAG, "Failed to find version in updates proto");
-                    renderPage("checkForUpdates");
-                    return;
-                }
+                build = org.lineageos.updater.protos.OtaMetadata.parseFrom(buildBytes);
 
                 try {
                     if (update != null) {
@@ -681,9 +707,9 @@ public class UpdatesActivity extends AppCompatActivity {
                 return;
             }
 
-            if (!Objects.equals(updateId, "") && update != null && BuildInfoUtils.getBuildDateTimestamp() < update.getTimestamp()) {
+            if (!Objects.equals(updateId, "") && update != null) {
                 try {
-                    String urlCL = Utils.getChangelogURL(this);
+                    String urlCL = update.getChangelogUrl();
                     URL url = new URL(urlCL);
                     BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
                     String input;

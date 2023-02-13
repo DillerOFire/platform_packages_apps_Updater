@@ -43,7 +43,8 @@ import org.lineageos.updater.controller.UpdaterService;
 import org.lineageos.updater.model.Update;
 import org.lineageos.updater.model.UpdateBaseInfo;
 import org.lineageos.updater.model.UpdateInfo;
-import org.lineageos.updater.protos.Build;
+import org.lineageos.updater.protos.DeviceState;
+import org.lineageos.updater.protos.OtaMetadata;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -80,22 +81,22 @@ public class Utils {
         update.setTimestamp(object.getLong("datetime"));
         update.setName(object.getString("filename"));
         update.setDownloadId(object.getString("id"));
-        update.setType(object.getString("romtype"));
+        update.setType(object.getInt("romtype"));
         update.setFileSize(object.getLong("size"));
         update.setDownloadUrl(object.getString("url"));
         update.setVersion(object.getString("version"));
         return update;
     }
 
-    public static UpdateInfo parseProtoUpdate(Build build) {
+    public static UpdateInfo parseProtoUpdate(OtaMetadata build) {
         Update update = new Update();
-        update.setTimestamp(build.getCreated());
-        update.setName(build.getName());
-        update.setDownloadId(build.getSha256());
-        update.setType(build.getChannel());
-        update.setFileSize(build.getSize());
-        update.setDownloadUrl(build.getUrl());
-        update.setVersion(build.getVersion());
+        DeviceState postDeviceState = build.getPostcondition();
+        update.setName(build.getOriginalFilename());
+        update.setDownloadId(build.getOriginalFilename());
+        update.setType(build.getType().getNumber());
+        update.setFileSize(build.getSizeBytes());
+        update.setDownloadUrl(build.getCurrentDownloadUrl());
+        update.setChangelogUrl(build.getChangelogUrl());
         return update;
     }
 
@@ -106,10 +107,6 @@ public class Utils {
         }
         if (update.getTimestamp() < SystemProperties.getLong(Constants.PROP_BUILD_DATE, 0)) {
             Log.d(TAG, update.getName() + " is older than/equal to the current build");
-            return false;
-        }
-        if (!update.getType().equalsIgnoreCase(SystemProperties.get(Constants.PROP_RELEASE_TYPE))) {
-            Log.d(TAG, update.getName() + " has type " + update.getType());
             return false;
         }
         return true;
@@ -153,52 +150,13 @@ public class Utils {
         return updates;
     }
 
-    public static String getChangelogURL(Context context) {
-        String incrementalVersion = SystemProperties.get(Constants.PROP_BUILD_VERSION_INCREMENTAL);
-        String device = SystemProperties.get(Constants.PROP_NEXT_DEVICE,
-                SystemProperties.get(Constants.PROP_DEVICE));
-        String channel = SystemProperties.get(Constants.PROP_RELEASE_TYPE).toLowerCase(Locale.ROOT);
-        String date = SystemProperties.get(Constants.PROP_BUILD_DATE);
-        @SuppressLint("HardwareIds") String id = android.provider.Settings.Secure.getString(
-                context.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
-
-        if (PreferenceManager.getDefaultSharedPreferences(context).getInt("earlyUpdates", 0) <= 0)
-            id = "redacted";
-
-        String changelogUrl = SystemProperties.get(Constants.PROP_UPDATER_URI_CHANGELOG);
-        if (changelogUrl.trim().isEmpty()) {
-            changelogUrl = context.getString(R.string.updater_server_url_changelog);
-        }
-
-        return changelogUrl.replace("{device}", device)
-                .replace("{channel}", channel)
-                .replace("{date}", date)
-                .replace("{id}", id)
-                .replace("{incr}", incrementalVersion);
-    }
-
     public static String getServerURL(Context context) {
-        String incrementalVersion = SystemProperties.get(Constants.PROP_BUILD_VERSION_INCREMENTAL);
-        String device = SystemProperties.get(Constants.PROP_NEXT_DEVICE,
-                SystemProperties.get(Constants.PROP_DEVICE));
-        String channel = SystemProperties.get(Constants.PROP_RELEASE_TYPE).toLowerCase(Locale.ROOT);
-        String date = SystemProperties.get(Constants.PROP_BUILD_DATE);
-        @SuppressLint("HardwareIds") String id = android.provider.Settings.Secure.getString(
-                context.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
-
-        if (PreferenceManager.getDefaultSharedPreferences(context).getInt("earlyUpdates", 0) <= 0)
-            id = "redacted";
-
         String serverUrl = SystemProperties.get(Constants.PROP_UPDATER_URI);
         if (serverUrl.trim().isEmpty()) {
             serverUrl = context.getString(R.string.updater_server_url);
         }
 
-        return serverUrl.replace("{device}", device)
-                .replace("{channel}", channel)
-                .replace("{date}", date)
-                .replace("{id}", id)
-                .replace("{incr}", incrementalVersion);
+        return serverUrl;
     }
 
     public static void triggerUpdate(Context context, String downloadId) {

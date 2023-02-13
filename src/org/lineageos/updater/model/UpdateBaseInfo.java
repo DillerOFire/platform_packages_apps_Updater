@@ -22,11 +22,13 @@ public interface UpdateBaseInfo {
 
     long getTimestamp();
 
-    String getType();
+    int getType();
 
     String getVersion();
 
     String getDownloadUrl();
 
     long getFileSize();
+
+    String getChangelogUrl();
 }
