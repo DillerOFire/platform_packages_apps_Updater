@@ -12,6 +12,7 @@ import android.icu.text.NumberFormat;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.StrictMode;
@@ -900,13 +901,22 @@ public class UpdatesActivity extends AppCompatActivity {
     };
 
     private int easterEggSteps = 0;
+    private Handler handler = new Handler();
+    private Runnable resetEasterEggSteps = new Runnable() {
+        @Override
+        public void run() {
+            easterEggSteps = 0;
+        }
+    };
 
     private void easterEgg() {
         easterEggSteps++;
-
+        handler.removeCallbacks(resetEasterEggSteps);
         if (easterEggSteps == 7) {
-            easterEggSteps = 0;
             renderPage("enrollEarlyUpdates");
+            easterEggSteps = 0;
+        } else {
+            handler.postDelayed(resetEasterEggSteps, 1000);
         }
     }
 }
