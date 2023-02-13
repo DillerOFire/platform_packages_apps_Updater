@@ -318,7 +318,10 @@ public class UpdatesActivity extends AppCompatActivity {
                     case UpdateEngine.UpdateStatusConstants.FINALIZING:
                         installingUpdate = true;
                         Log.d(TAG, "UpdateEngine: FINALIZING");
-                        renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_optimizing_apps));
+                        pageIdActive = prefs.getString("pageId", "");
+                        if (!pageIdActive.equals("updateInstallingPaused")) {
+                            renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_optimizing_apps));
+                        }
                         break;
                     case UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT:
                         installingUpdate = false;
