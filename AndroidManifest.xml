@@ -25,9 +25,11 @@
 
         <activity
             android:name=".UpdatesActivity"
+            android:excludeFromRecents="true"
             android:label="@string/display_name"
             android:exported="true"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:launchMode="singleTop">
             <intent-filter android:priority="1">
                 <action android:name="android.settings.SYSTEM_UPDATE_SETTINGS" />
 
@@ -36,13 +38,13 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.android.settings.SHORTCUT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
         <service android:name=".controller.UpdaterService" />
-        <service android:name=".ExportUpdateService" />
+        <!--<service android:name=".ExportUpdateService" />-->
 
         <receiver android:name=".UpdaterReceiver" android:exported="false">
             <intent-filter>
