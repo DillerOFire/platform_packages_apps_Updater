@@ -285,17 +285,6 @@ public class UpdatesActivity extends AppCompatActivity {
                 Log.d(TAG, "No saved update found");
             }
         }
-        wasUpdating = prefs.getBoolean("updating", false);
-        Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
-        pageIdActive = prefs.getString("pageId", "updateChecking");
-        if (!wasUpdating && pageIdActive.equals("updateAvailable") && !installingUpdate)
-            pageIdActive = "checkForUpdates"; //Check for updates on next start!
-        Log.d(TAG, "Loading pageId " + pageIdActive);
-        htmlChangelog = prefs.getString("changelog", "");
-        //Log.d(TAG, "Loading changelog: " + htmlChangelog);
-
-        //Import and fill in the pages for the first time
-        registerPages();
 
         //Note that, regardless of whether the activity is open, these callbacks will still execute!
         //That means we still update pages in the background based on the update's progress
@@ -409,6 +398,20 @@ public class UpdatesActivity extends AppCompatActivity {
                 }
             }
         };
+
+        wasUpdating = prefs.getBoolean("updating", false);
+        Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
+        if (!installingUpdate) {
+            pageIdActive = prefs.getString("pageId", "updateChecking");
+            if (!wasUpdating && pageIdActive.equals("updateAvailable"))
+                pageIdActive = "checkForUpdates"; //Check for updates on next start!
+        }
+        Log.d(TAG, "Loading pageId " + pageIdActive);
+        htmlChangelog = prefs.getString("changelog", "");
+        //Log.d(TAG, "Loading changelog: " + htmlChangelog);
+
+        //Import and fill in the pages for the first time
+        registerPages();
 
         //Load the initial page
         new PageHandler().execute();
