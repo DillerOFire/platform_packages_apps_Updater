@@ -34,9 +34,6 @@ import android.widget.Toast;
 
 import androidx.preference.PreferenceManager;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.lineageos.updater.R;
 import org.lineageos.updater.UpdatesDbHelper;
 import org.lineageos.updater.controller.UpdaterService;
@@ -70,24 +67,6 @@ public class Utils {
         return new File(context.getString(R.string.download_path));
     }
 
-    public static File getCachedUpdateList(Context context) {
-        return new File(context.getCacheDir(), "updates.json");
-    }
-
-    // This should really return an UpdateBaseInfo object, but currently this only
-    // used to initialize UpdateInfo objects
-    public static UpdateInfo parseJsonUpdate(JSONObject object) throws JSONException {
-        Update update = new Update();
-        update.setTimestamp(object.getLong("datetime"));
-        update.setName(object.getString("filename"));
-        update.setDownloadId(object.getString("id"));
-        update.setType(object.getInt("romtype"));
-        update.setFileSize(object.getLong("size"));
-        update.setDownloadUrl(object.getString("url"));
-        update.setVersion(object.getString("version"));
-        return update;
-    }
-
     public static UpdateInfo parseProtoUpdate(OtaMetadata build) {
         Update update = new Update();
         DeviceState postDeviceState = build.getPostcondition();
@@ -118,38 +97,6 @@ public class Utils {
                         SystemProperties.get(Constants.PROP_BUILD_VERSION));
     }
 
-    public static List<UpdateInfo> parseJson(File file, boolean compatibleOnly)
-            throws IOException, JSONException {
-        List<UpdateInfo> updates = new ArrayList<>();
-
-        StringBuilder json = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            for (String line; (line = br.readLine()) != null;) {
-                json.append(line);
-            }
-        }
-
-        JSONObject obj = new JSONObject(json.toString());
-        JSONArray updatesList = obj.getJSONArray("response");
-        for (int i = 0; i < updatesList.length(); i++) {
-            if (updatesList.isNull(i)) {
-                continue;
-            }
-            try {
-                UpdateInfo update = parseJsonUpdate(updatesList.getJSONObject(i));
-                if (!compatibleOnly || isCompatible(update)) {
-                    updates.add(update);
-                } else {
-                    Log.d(TAG, "Ignoring incompatible update " + update.getName());
-                }
-            } catch (JSONException e) {
-                Log.e(TAG, "Could not parse update object, index=" + i, e);
-            }
-        }
-
-        return updates;
-    }
-
     public static String getServerURL(Context context) {
         String serverUrl = SystemProperties.get(Constants.PROP_UPDATER_URI);
         if (serverUrl.trim().isEmpty()) {
@@ -177,31 +124,6 @@ public class Utils {
         NetworkInfo info = cm.getActiveNetworkInfo();
         return (info != null && (info.getType() == ConnectivityManager.TYPE_ETHERNET
                 || info.getType() == ConnectivityManager.TYPE_WIFI));
-    }
-
-    /**
-     * Compares two json formatted updates list files
-     *
-     * @param oldJson old update list
-     * @param newJson new update list
-     * @return true if newJson has at least a compatible update not available in oldJson
-     */
-    public static boolean checkForNewUpdates(File oldJson, File newJson)
-            throws IOException, JSONException {
-        List<UpdateInfo> oldList = parseJson(oldJson, true);
-        List<UpdateInfo> newList = parseJson(newJson, true);
-        Set<String> oldIds = new HashSet<>();
-        for (UpdateInfo update : oldList) {
-            oldIds.add(update.getDownloadId());
-        }
-        // In case of no new updates, the old list should
-        // have all (if not more) the updates
-        for (UpdateInfo update : newList) {
-            if (!oldIds.contains(update.getDownloadId())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

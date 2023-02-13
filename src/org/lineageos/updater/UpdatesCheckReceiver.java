@@ -30,7 +30,6 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
-import org.json.JSONException;
 import org.lineageos.updater.download.DownloadClient;
 import org.lineageos.updater.misc.Constants;
 import org.lineageos.updater.misc.Utils;
