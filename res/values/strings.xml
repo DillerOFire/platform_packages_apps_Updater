@@ -30,58 +30,19 @@
     -->
     <string name="updater_server_url" translatable="false">https://get.hentaios.com/kivotos/v0/rest</string>
 
-    <string name="verification_failed_notification">Verification failed</string>
-    <string name="verifying_download_notification">Verifying update</string>
-    <string name="downloading_notification">Downloading</string>
-    <string name="download_paused_notification">Download paused</string>
-    <string name="download_paused_error_notification">Download error</string>
-    <string name="download_completed_notification">Download completed</string>
-    <string name="download_starting_notification">Starting download</string>
     <string name="update_failed_notification">Could not update</string>
-    <string name="installation_suspended_notification">Installation suspended</string>
 
     <string name="new_updates_found_title">New updates</string>
 
-    <string name="text_download_speed">%1$s, %2$s/s</string>
-
-    <string name="pause_button">Pause</string>
-    <string name="resume_button">Resume</string>
-    <string name="suspend_button">Suspend</string>
-
-    <string name="installing_update">Installing update package</string>
-    <string name="installing_update_error">Install error</string>
-    <string name="installing_update_finished">Update installed</string>
-    <string name="finalizing_package">Finalizing package installation</string>
-    <string name="preparing_ota_first_boot">Preparing for first boot</string>
-    <string name="dialog_prepare_zip_message">Preliminary update preparation</string>
-
-    <string name="reboot">Reboot</string>
-
-    <string name="menu_refresh">Refresh</string>
-
-    <string name="snack_updates_found">Update Available!</string>
-    <string name="snack_no_updates_found">Your system is up to date</string>
-    <string name="snack_updates_check_failed">Update check failed</string>
-
-    <string name="snack_download_failed">Could not update</string>
     <string name="snack_download_verification_failed">Update verification failed</string>
-    <string name="snack_download_verified">Update Available!</string>
-    <string name="snack_update_not_installable">Update not installable</string>
 
     <string name="header_title_text" translatable="false"></string>
     <string name="header_android_version">Android version: <xliff:g id="version" example="7.1.2">%1$s</xliff:g></string>
     <string name="header_build_security_patch">Build security patch: <xliff:g id="date" example="2022-12-05">%1$s</xliff:g></string>
     <string name="header_build_date">Build date: <xliff:g id="date" example="December 6, 2022">%1$s</xliff:g></string>
-    <string name="header_last_updates_check">Last checked <xliff:g id="date" example="1 January 1970">%1$s</xliff:g> at <xliff:g id="time" example="01:23">%2$s</xliff:g></string>
-    <string name="header_last_updates_check_never">Never checked before!</string>
 
-    <string name="list_build_version" translatable="false">Android <xliff:g id="version" example="13">%1$s</xliff:g></string>
     <string name="list_build_version_date" translatable="false">Android <xliff:g id="version" example="13">%1$s</xliff:g> - <xliff:g id="date" example="July 11, 2017">%2$s</xliff:g></string>
-    <string name="list_download_progress_newer"><xliff:g id="filesize_without_unit" example="12.2">%1$s</xliff:g> of <xliff:g id="filesize_without_unit" example="310 MB">%2$s</xliff:g></string>
-    <string name="list_download_progress_eta_newer"><xliff:g id="filesize_without_unit" example="12.2">%1$s</xliff:g> of <xliff:g id="filesize_without_unit" example="310 MB">%2$s</xliff:g> (<xliff:g id="eta" example="3 minutes left">%3$s</xliff:g>)</string>
-    <string name="list_verifying_update">Verifying update</string>
     <string name="list_no_updates">Your system is up to date</string>
-    <string name="list_checking_updates">Checking for updates...</string>
 
     <plurals name="eta_seconds">
         <item quantity="one">1 second left</item>
@@ -97,7 +58,6 @@
     </plurals>
 
     <string name="new_updates_channel_title">New updates</string>
-    <string name="ongoing_channel_title">Ongoing downloads</string>
     <string name="update_failed_channel_title">Update failed</string>
 
     <!--
@@ -105,11 +65,9 @@
          TO-DO: Clean-up the old resources
     -->
     <string name="system_update_activity_attempt_install_later_text">Update cannot be installed at the current moment, please try again later.</string>
-    <string name="system_update_almost_done">System update almost done</string>
     <string name="system_update_check_now_button_text">Check for update</string>
     <string name="system_update_countdown_cancel_button">Cancel install</string>
     <string name="system_update_download_error_notification_title">"Couldn't download update"</string>
-    <string name="system_update_download_eta_calculating">Calculating...</string>
     <string name="system_update_download_pause_button">Pause</string>
     <string name="system_update_download_paused_title_text">Download paused</string>
     <string name="system_update_download_resume_button">Resume</string>
