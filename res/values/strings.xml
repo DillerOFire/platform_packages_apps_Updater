@@ -28,8 +28,8 @@
           {type} - Build type
           {incr} - Incremental version
     -->
-    <string name="updater_server_url" translatable="false">http://joshuadoes.com:7331/v0/build/{channel}/{device}/{date}/{id}</string>
-    <string name="updater_server_url_changelog" translatable="false">http://joshuadoes.com:7331/v0/changelog/{channel}/{device}/{id}</string>
+    <string name="updater_server_url" translatable="false">https://get.hentaios.com/kivotos/v0/rest</string>
+    <string name="updater_server_url_changelog" translatable="false">https://get.hentaios.com/kivotos/v0/rest</string>
 
     <string name="verification_failed_notification">Verification failed</string>
     <string name="verifying_download_notification">Verifying update</string>
