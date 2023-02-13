@@ -1,6 +1,5 @@
 package org.lineageos.updater;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -23,7 +22,6 @@ import android.provider.Settings;
 import android.text.format.Formatter;
 import android.util.Base64;
 import android.util.Log;
-import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -36,35 +34,27 @@ import androidx.preference.PreferenceManager;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.lineageos.updater.controller.UpdaterController;
 import org.lineageos.updater.controller.UpdaterService;
 import org.lineageos.updater.misc.BuildInfoUtils;
 import org.lineageos.updater.misc.StringGenerator;
 import org.lineageos.updater.misc.Utils;
-import org.lineageos.updater.model.Update;
-import org.lineageos.updater.model.UpdateBaseInfo;
 import org.lineageos.updater.model.UpdateInfo;
 import org.lineageos.updater.model.UpdateStatus;
 import org.lineageos.updater.protos.DeviceState;
-import org.lineageos.updater.protos.OtaMetadata;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class UpdatesActivity extends AppCompatActivity {
     //Android flags
@@ -448,7 +438,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 renderPageProgress("updateChecking", -1, "");
             }
         };
-        page.icon = R.drawable.ic_system_update_check;
+        page.icon = R.drawable.ic_system_update_loading;
         page.strStatus = getString(R.string.system_update_update_checking);
         return page;
     }
@@ -521,6 +511,7 @@ public class UpdatesActivity extends AppCompatActivity {
         Page page = getPage("updateDownloading");
         page.strStatus = getString(R.string.system_update_download_error_notification_title);
         page.btnPrimaryText = getString(R.string.system_update_download_retry_button_text);
+        page.icon = R.drawable.ic_system_update_error;
         page.btnPrimaryClickListener = v -> {
             downloadResume();
         };
@@ -596,7 +587,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private Page pageEarlyUpdates() {
         Page page = new Page();
-        page.icon = R.drawable.ic_system_update_dl;
+        page.icon = R.drawable.ic_system_update_enroll;
         page.strStatus = getString(R.string.system_update_enroll_early_release);
         page.btnPrimaryText = getString(R.string.system_update_enroll_early_release_accept_button);
         page.btnPrimaryClickListener = v -> {
