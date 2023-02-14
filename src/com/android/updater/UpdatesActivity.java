@@ -941,8 +941,7 @@ public class UpdatesActivity extends AppCompatActivity {
     };
 
     private void easterEgg() {
-        pageIdActive = prefs.getString("pageId", "");
-        if (pageIdActive.equals("checkForUpdates")) {
+        if (!wasUpdating) {
             easterEggSteps++;
             handler.removeCallbacks(resetEasterEggSteps);
             if (easterEggSteps == 7) {
