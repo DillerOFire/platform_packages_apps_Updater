@@ -182,7 +182,8 @@ public class UpdatesActivity extends AppCompatActivity {
         if (!(pageIdActive.equals("error") ||
                 pageIdActive.equals("checkForUpdates") ||
                 pageIdActive.equals("updateAvailable") ||
-                pageIdActive.equals("updateChecking"))) {
+                pageIdActive.equals("updateChecking") ||
+                pageIdActive.equals("enrollEarlyUpdates"))) {
             //Log.d(TAG, "Saving pageId " + pageIdActive);
             prefsEditor.putString("pageId", pageIdActive).apply();
             prefsEditor.apply();
