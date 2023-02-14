@@ -147,13 +147,12 @@ public class UpdatesActivity extends AppCompatActivity {
 
     public void renderPage(String pageId) {
         if (mUpdaterController != null && !installingUpdate) {
-            Log.d(TAG, "UpdateController status is: " + mUpdaterController.getUpdate(updateId));
             if (!(mUpdaterController.isDownloading(updateId) ||
                     mUpdaterController.isVerifyingUpdate(updateId) ||
                     mUpdaterController.isInstallingUpdate(updateId) ||
                     mUpdaterController.isWaitingForReboot(updateId))) {
 
-                Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
+                //Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
                 if (pageId.equals("updateInstalling") ||
                         pageId.equals("updateInstallingPaused") ||
                         pageId.equals("updateInstalled")) {
@@ -164,7 +163,7 @@ public class UpdatesActivity extends AppCompatActivity {
             }
         }
 
-        Log.d(TAG, "Render page: " + pageId);
+        //Log.d(TAG, "Render page: " + pageId);
 
         if (!Objects.equals(pageIdActive, "") && !Objects.equals(pageIdActive, pageId)) {
             Page pageLast = getPage(pageIdActive);
@@ -180,7 +179,10 @@ public class UpdatesActivity extends AppCompatActivity {
         }
 
         pageIdActive = pageId;
-        if (!Objects.equals(pageIdActive, "error")) {
+        if (!(pageIdActive.equals("error") ||
+                pageIdActive.equals("checkForUpdates") ||
+                pageIdActive.equals("updateAvailable") ||
+                pageIdActive.equals("updateChecking"))) {
             //Log.d(TAG, "Saving pageId " + pageIdActive);
             prefsEditor.putString("pageId", pageIdActive).apply();
             prefsEditor.apply();
@@ -376,9 +378,8 @@ public class UpdatesActivity extends AppCompatActivity {
                     }
                 } else if (UpdaterController.ACTION_DOWNLOAD_PROGRESS.equals(intent.getAction())) {
                     registerPage("updateDownloading", pageUpdateDownloading());
-
-                    String progStep = getString(R.string.system_update_system_update_downloading_title_text);
-
+                    String percentage = NumberFormat.getPercentInstance().format(update.getProgress() / 100.f);
+                    String progStep = percentage + " • " + getString(R.string.system_update_system_update_downloading_title_text);
                     if (Objects.equals(pageIdActive, "updateDownloading"))
                         renderPageProgress("updateDownloading", update.getProgress(), progStep);
                 } else if (UpdaterController.ACTION_INSTALL_PROGRESS.equals(intent.getAction())) {
@@ -405,11 +406,14 @@ public class UpdatesActivity extends AppCompatActivity {
         };
 
         wasUpdating = prefs.getBoolean("updating", false);
-        Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
+        //Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
         if (!installingUpdate) {
             pageIdActive = prefs.getString("pageId", "updateChecking");
-            if (!wasUpdating && pageIdActive.equals("updateAvailable"))
+            if (pageIdActive.equals("")) {
+                pageIdActive = "updateChecking";
+            } else if (!wasUpdating && pageIdActive.equals("updateAvailable")) {
                 pageIdActive = "checkForUpdates"; //Check for updates on next start!
+            }
         }
         Log.d(TAG, "Loading pageId " + pageIdActive);
         htmlChangelog = prefs.getString("changelog", "");
@@ -524,7 +528,7 @@ public class UpdatesActivity extends AppCompatActivity {
     private Page pageUpdatePaused() {
         Page page = new Page();
         page.icon = R.drawable.ic_system_update_dl;
-        page.strStatus = getString(R.string.system_update_notification_title_update_paused);
+        page.strStatus = getString(R.string.system_update_installing_title_text);
         page.btnPrimaryText = getString(R.string.system_update_resume_button_text);
         page.btnPrimaryClickListener = v -> {
             downloadResume();
@@ -649,8 +653,7 @@ public class UpdatesActivity extends AppCompatActivity {
         Log.d(TAG, "Checking for updates!");
         setUpdating(false);
         updateCheck = true;
-        if (!Objects.equals(pageIdActive, "updateChecking"))
-            renderPage("updateChecking");
+        renderPage("updateChecking");
 
         new Thread(() -> {
             try  {
@@ -737,7 +740,7 @@ public class UpdatesActivity extends AppCompatActivity {
                     exception = e;
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error while downloading updates proto: " + e);
+                //Log.e(TAG, "Error while downloading updates proto: " + e);
                 exception = e;
             }
 
@@ -805,19 +808,21 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private void downloadCancel() {
         Log.d(TAG, "Cancelling download!");
-        setUpdating(true);
+        setUpdating(false);
         mUpdaterController.pauseDownload(updateId);
         mUpdaterController.deleteUpdate(updateId);
+        prefsEditor.putString("pageId", "").apply();
         prefsEditor.putInt("progPercent", 0).apply();
         prefsEditor.putString("progStep", "").apply();
-        prefsEditor.apply();
         renderPage("updateAvailable");
+        refresh();
     }
 
     private void downloadPause() {
         Log.d(TAG, "Pausing download!");
         setUpdating(true);
         registerPage("updatePaused", pageUpdatePaused());
+        progressBar.setIndeterminate(true);
         renderPage("updatePaused");
         mUpdaterController.pauseDownload(updateId);
     }
@@ -826,6 +831,7 @@ public class UpdatesActivity extends AppCompatActivity {
         Log.d(TAG, "Resuming download!");
         setUpdating(true);
         registerPage("updateDownloading", pageUpdateDownloading());
+        progressBar.setIndeterminate(false);
         renderPage("updateDownloading");
         mUpdaterController.resumeDownload(updateId);
     }
@@ -862,7 +868,7 @@ public class UpdatesActivity extends AppCompatActivity {
 
     private void setUpdating(Boolean updating) {
         wasUpdating = updating;
-        Log.d(TAG, "Set updating: " + updating);
+        //Log.d(TAG, "Set updating: " + updating);
         prefsEditor.putBoolean("updating", updating).apply();
         prefsEditor.apply();
     }
@@ -889,7 +895,7 @@ public class UpdatesActivity extends AppCompatActivity {
             unbindService(mConnection);
         }
 
-        Log.d(TAG, "Committing preferences before close");
+        //Log.d(TAG, "Committing preferences before close");
         prefsEditor.apply(); //Make sure we commit preferences no matter what
 
         super.onStop();

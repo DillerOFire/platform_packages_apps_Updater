@@ -108,7 +108,7 @@ public class Page {
                             mContext.progressBar.setVisibility(View.VISIBLE);
                         }
 
-                        if (!Objects.equals(htmlContent, "")) {
+                        if (htmlContent != null && !Objects.equals(htmlContent, "")) {
                             String hexColor = "";
                             if (htmlColor != 0) {
                                 int colorTextR = Color.red(htmlColor);
