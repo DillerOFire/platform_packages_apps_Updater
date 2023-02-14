@@ -935,13 +935,16 @@ public class UpdatesActivity extends AppCompatActivity {
     };
 
     private void easterEgg() {
-        easterEggSteps++;
-        handler.removeCallbacks(resetEasterEggSteps);
-        if (easterEggSteps == 7) {
-            renderPage("enrollEarlyUpdates");
-            easterEggSteps = 0;
-        } else {
-            handler.postDelayed(resetEasterEggSteps, 1000);
+        pageIdActive = prefs.getString("pageId", "");
+        if (pageIdActive.equals("checkForUpdates")) {
+            easterEggSteps++;
+            handler.removeCallbacks(resetEasterEggSteps);
+            if (easterEggSteps == 7) {
+                renderPage("enrollEarlyUpdates");
+                easterEggSteps = 0;
+            } else {
+                handler.postDelayed(resetEasterEggSteps, 1000);
+            }
         }
     }
 }
