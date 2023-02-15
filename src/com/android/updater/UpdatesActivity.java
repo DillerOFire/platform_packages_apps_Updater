@@ -99,47 +99,6 @@ public class UpdatesActivity extends AppCompatActivity {
     private UpdateEngine mUpdateEngine;
     private UpdateEngineCallback mUpdateEngineCallback;
 
-    private class PageHandler extends AsyncTask<Void, Void, String> {
-        @Override
-        protected String doInBackground(Void... voids) {
-            if (!Objects.equals(updateId, "") && update != null) {
-                if (mUpdaterController != null) {
-                    if (update.getStatus() == UpdateStatus.STARTING) {
-                        return "updateStarting";
-                    } else if (mUpdaterController.isDownloading(updateId) || update.getStatus() == UpdateStatus.DOWNLOADING) {
-                        return "updateDownloading";
-                    } else if (mUpdaterController.isVerifyingUpdate(updateId) || mUpdaterController.isInstallingUpdate(updateId) || update.getStatus() == UpdateStatus.INSTALLING) {
-                        return "updateInstalling";
-                    } else if (mUpdaterController.isWaitingForReboot(updateId)) {
-                        return "updateInstalled";
-                    }
-                } else if (wasUpdating) {
-                    return ""; //We still have the update object and we're still updating, let the logic take care of what's next
-                }
-            }
-
-            new Thread(() -> {
-                try {
-                    Thread.sleep(200);
-                    if (!installingUpdate && pageIdActive.isEmpty()) {
-                        Log.d(TAG, "PageHandler: Update is null");
-                        pageIdActive = "updateChecking";
-                    }
-                } catch (Exception e) {
-                    pageIdActive = "updateChecking";
-                }
-            });
-            return pageIdActive;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-            if (!Objects.equals(result, ""))
-                renderPage(result);
-        }
-    }
-
     public Page getPage(String pageId) {
         //Log.d(TAG, "Get page: " + pageId);
         return pages.get(pageId);
@@ -409,8 +368,10 @@ public class UpdatesActivity extends AppCompatActivity {
         wasUpdating = prefs.getBoolean("updating", false);
         //Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
         if (!installingUpdate) {
-            pageIdActive = prefs.getString("pageId", "updateChecking");
+            pageIdActive = prefs.getString("pageId", "");
             if (pageIdActive.equals("")) {
+                pageIdActive = "updateChecking";
+            } else if (!installingUpdate) {
                 pageIdActive = "updateChecking";
             } else if (!wasUpdating && pageIdActive.equals("updateAvailable")) {
                 pageIdActive = "checkForUpdates"; //Check for updates on next start!
@@ -422,9 +383,6 @@ public class UpdatesActivity extends AppCompatActivity {
 
         //Import and fill in the pages for the first time
         registerPages();
-
-        //Load the initial page
-        new PageHandler().execute();
 
         //Bind the update engine
         try {
@@ -890,7 +848,7 @@ public class UpdatesActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onStop() {
+    public void onDestroy() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mBroadcastReceiver);
         if (mUpdaterService != null) {
             unbindService(mConnection);
@@ -899,7 +857,7 @@ public class UpdatesActivity extends AppCompatActivity {
         //Log.d(TAG, "Committing preferences before close");
         prefsEditor.apply(); //Make sure we commit preferences no matter what
 
-        super.onStop();
+        super.onDestroy();
     }
 
     private final ServiceConnection mConnection = new ServiceConnection() {
@@ -917,11 +875,9 @@ public class UpdatesActivity extends AppCompatActivity {
                 mUpdaterController.setUpdatesAvailableOnline(updatesOnline, true);
             }
 
-            if (pageIdActive.equals("updateChecking")) {
+            if ((!installingUpdate) && (pageIdActive.equals("updateChecking"))) {
                 Log.d(TAG, "Running automatic update check...");
                 refresh();
-            } else {
-                new PageHandler().execute(); //Potentially load a different page from the initial one
             }
         }
 
