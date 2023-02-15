@@ -602,6 +602,23 @@ public class UpdatesActivity extends AppCompatActivity {
         return page;
     }
 
+    private void removeDownloads() {
+        try {
+            File otaPackageDir = new File(getString(R.string.download_path));
+            if (otaPackageDir.isDirectory() && !installingUpdate && !wasUpdating) {
+                File[] files = otaPackageDir.listFiles();
+                for (File file : files) {
+                    if (file.isFile()) {
+                        file.delete();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error while removing updates: " + e);
+            exception = e;
+        }
+    }
+
     private void refresh() {
         if (mUpdaterController == null) {
             Log.e(TAG, "mUpdaterController is null during update check");
@@ -617,6 +634,9 @@ public class UpdatesActivity extends AppCompatActivity {
         new Thread(() -> {
             try  {
                 Thread.sleep(1500);
+
+                // Remove all current downloads
+                removeDownloads();
 
                 String urlOTA = Utils.getServerURL(this);
                 URL url = new URL(urlOTA);
@@ -674,13 +694,6 @@ public class UpdatesActivity extends AppCompatActivity {
                 build = com.android.updater.protos.OtaMetadata.parseFrom(buildBytes);
 
                 try {
-                    if (update != null) {
-                        File oldFile = update.getFile();
-                        if (oldFile != null) {
-                            oldFile.delete();
-                        }
-                    }
-
                     update = Utils.parseProtoUpdate(build);
                     updateId = update.getDownloadId();
 
@@ -747,13 +760,6 @@ public class UpdatesActivity extends AppCompatActivity {
     }
 
     private void download() {
-        if (update != null) {
-            File oldFile = update.getFile();
-            if (oldFile != null) {
-                oldFile.delete();
-            }
-        }
-
         //Reset the page entirely
         registerPage("updateDownloading", pageUpdateDownloading());
         renderPage("updateDownloading");
