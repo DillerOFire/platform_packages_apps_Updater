@@ -146,15 +146,17 @@ public class UpdatesActivity extends AppCompatActivity {
                 pageIdActive.equals("enrollEarlyUpdates"))) {
             //Log.d(TAG, "Saving pageId " + pageIdActive);
             prefsEditor.putString("pageId", pageIdActive).apply();
-            prefsEditor.apply();
         }
 
-        page.render(this);
-        if (!page.runnableRan) {
-            page.runnableRan = true;
-            Thread thread = new Thread(page.runnable);
-            thread.start();
-        }
+        final Page finalPage = page; // Make page final to use it in the runOnUiThread
+        runOnUiThread(() -> {
+            finalPage.render(this);
+            if (!finalPage.runnableRan) {
+                finalPage.runnableRan = true;
+                Thread thread = new Thread(finalPage.runnable);
+                thread.start();
+            }
+        });
     }
 
     public void renderPageProgress(String pageId, int progress, String progressStep) {
@@ -169,9 +171,8 @@ public class UpdatesActivity extends AppCompatActivity {
         page.progPercent = progress;
         page.progStep = progressStep;
 
-        prefsEditor.putInt("progPercent", page.progPercent);
-        prefsEditor.putString("progStep", page.progStep);
-        prefsEditor.apply();
+        prefsEditor.putInt("progPercent", page.progPercent).apply();
+        prefsEditor.putString("progStep", page.progStep).apply();
 
         renderPage(pageId);
     }
@@ -599,13 +600,11 @@ public class UpdatesActivity extends AppCompatActivity {
         page.btnPrimaryText = getString(R.string.system_update_enroll_early_release_accept_button);
         page.btnPrimaryClickListener = v -> {
             prefsEditor.putInt("earlyUpdates", 1).apply();
-            prefsEditor.apply();
             renderPage("checkForUpdates");
         };
         page.btnExtraText = getString(R.string.system_update_enroll_early_release_reject_button);
         page.btnExtraClickListener = v -> {
             prefsEditor.putInt("earlyUpdates", 0).apply();
-            prefsEditor.apply();
             renderPage("checkForUpdates");
         };
         page.htmlContent = getString(R.string.system_update_enroll_early_release_terms);
@@ -643,7 +642,7 @@ public class UpdatesActivity extends AppCompatActivity {
         renderPage("updateChecking");
 
         new Thread(() -> {
-            try  {
+            try {
                 Thread.sleep(1500);
 
                 // Remove all current downloads
@@ -652,19 +651,18 @@ public class UpdatesActivity extends AppCompatActivity {
                 String urlOTA = Utils.getServerURL(this);
                 URL url = new URL(urlOTA);
 
-                String android_id = Settings.Secure.getString(getContentResolver(),
-                        Settings.Secure.ANDROID_ID);
-                if (prefs.getInt("earlyUpdates", 0) <= 0)
-                    android_id = "0";
+                String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+                int earlyUpdates = prefs.getInt("earlyUpdates", 0);
+                if (earlyUpdates <= 0) {
+                    androidId = "0";
+                }
 
                 long buildTimestamp = Long.parseLong(SystemProperties.get("ro.build.date.utc"));
-                long buildIncremental;
+                long buildIncremental = 0;
                 try {
                     buildIncremental = Long.parseLong(SystemProperties.get("ro.build.version.incremental"));
                 } catch (Exception e) {
                     Log.d(TAG, "Failed to parse ro.build.version.incremental, is this an official build?");
-                    buildIncremental = 0;
-                    exception = null;
                 }
 
                 DeviceState.Builder request = DeviceState.newBuilder();
@@ -675,7 +673,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
                 request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
                 request.setPatronId(prefs.getString("patronID", ""));
-                request.setHwId(android_id);
+                request.setHwId(androidId);
 
                 Boolean testing = true;
                 if (BuildConfig.DEBUG && testing) {
@@ -693,12 +691,6 @@ public class UpdatesActivity extends AppCompatActivity {
                 urlConnection.setDoOutput(true);
                 urlConnection.setDoInput(true);
                 urlConnection.setRequestMethod("POST");
-                try {
-                    req.writeTo(this.openFileOutput("config.txt", Context.MODE_PRIVATE));
-                }
-                catch (IOException e) {
-                    Log.e("Exception", "File write failed: " + e.toString());
-                }
                 req.writeTo(urlConnection.getOutputStream());
 
                 InputStream in = new BufferedInputStream(urlConnection.getInputStream());
@@ -723,7 +715,6 @@ public class UpdatesActivity extends AppCompatActivity {
                     exception = e;
                 }
             } catch (Exception e) {
-                //Log.e(TAG, "Error while downloading updates proto: " + e);
                 exception = e;
             }
 
@@ -736,19 +727,24 @@ public class UpdatesActivity extends AppCompatActivity {
                 return;
             }
 
-            if (!Objects.equals(updateId, "") && update != null) {
+            if (updateId != null && update != null) {
                 try {
                     String urlCL = update.getChangelogUrl();
-                    URL url = new URL(urlCL);
-                    BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
-                    String input;
-                    StringBuffer stringBuffer = new StringBuffer();
-                    while ((input = in.readLine()) != null)
-                        stringBuffer.append(input);
-                    in.close();
-                    htmlChangelog = stringBuffer.toString();
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to get changelog!");
+                    if (urlCL != null && !urlCL.isEmpty()) {
+                        URL url = new URL(urlCL);
+                        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String input;
+                        while ((input = in.readLine()) != null) {
+                            stringBuilder.append(input);
+                        }
+                        in.close();
+                        htmlChangelog = stringBuilder.toString();
+                    } else {
+                        htmlChangelog = "";
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to get changelog", e);
                     htmlChangelog = "";
                 }
 

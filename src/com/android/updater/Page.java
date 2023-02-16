@@ -34,110 +34,93 @@ public class Page {
     public UpdatesActivity mContext;
 
     public void render(UpdatesActivity context) {
-        this.mContext = context;
-        context.runOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
+        mContext = context;
+        context.runOnUiThread(this::hideAllViews);
 
-                        mContext.headerIcon.setVisibility(View.GONE);
-                        mContext.headerTitle.setVisibility(View.GONE);
-                        mContext.headerStatus.setVisibility(View.GONE);
-                        mContext.btnPrimary.setVisibility(View.GONE);
-                        mContext.btnSecondary.setVisibility(View.GONE);
-                        mContext.btnExtra.setVisibility(View.GONE);
-                        mContext.progressText.setVisibility(View.GONE); //Good separator between headerStatus and webView
-                        mContext.progressBar.setVisibility(View.GONE);
-                        mContext.webView.setVisibility(View.GONE);
+        if (icon != 0) {
+            mContext.headerIcon.setImageResource(icon);
+            mContext.headerIcon.setVisibility(View.VISIBLE);
+        }
 
-                        mContext.progressBar.setScaleY(1.0f);
+        if (!strTitle.isEmpty()) {
+            mContext.headerTitle.setText(strTitle);
+            mContext.headerTitle.setVisibility(View.VISIBLE);
+        }
 
-                        if (icon != 0) {
-                            mContext.headerIcon.setImageResource(icon);
-                            mContext.headerIcon.setVisibility(View.VISIBLE);
-                        }
+        if (!strStatus.isEmpty()) {
+            mContext.headerStatus.setText(strStatus);
+            mContext.headerStatus.setVisibility(View.VISIBLE);
+        }
 
-                        if (!Objects.equals(strTitle, "")) {
-                            mContext.headerTitle.setText(strTitle);
-                            mContext.headerTitle.setVisibility(View.VISIBLE);
-                        }
+        if (btnPrimaryClickListener != null && !btnPrimaryText.isEmpty()) {
+            mContext.btnPrimary.setText(btnPrimaryText);
+            setBtnClickListener(mContext.btnPrimary, btnPrimaryClickListener);
+            mContext.btnPrimary.setEnabled(true);
+            mContext.btnPrimary.setVisibility(View.VISIBLE);
+            if (Objects.equals(btnSecondaryText, ""))
+                mContext.btnSecondary.setVisibility(View.INVISIBLE);
+            if (Objects.equals(btnExtraText, ""))
+                mContext.btnExtra.setVisibility(View.INVISIBLE);
+        }
 
-                        if (!Objects.equals(strStatus, "")) {
-                            mContext.headerStatus.setText(strStatus);
-                            mContext.headerStatus.setVisibility(View.VISIBLE);
-                        }
+        if (btnSecondaryClickListener != null && !btnSecondaryText.isEmpty()) {
+            mContext.btnSecondary.setText(btnSecondaryText);
+            setBtnClickListener(mContext.btnSecondary, btnSecondaryClickListener);
+            mContext.btnSecondary.setEnabled(true);
+            mContext.btnSecondary.setVisibility(View.VISIBLE);
+            if (Objects.equals(btnPrimaryText, ""))
+                mContext.btnPrimary.setVisibility(View.INVISIBLE);
+            if (Objects.equals(btnExtraText, ""))
+                mContext.btnExtra.setVisibility(View.INVISIBLE);
+        }
 
-                        if (!Objects.equals(btnPrimaryText, "") && btnPrimaryClickListener != null) {
-                            mContext.btnPrimary.setText(btnPrimaryText);
-                            setBtnClickListener(mContext.btnPrimary, btnPrimaryClickListener);
-                            mContext.btnPrimary.setEnabled(true);
-                            mContext.btnPrimary.setVisibility(View.VISIBLE);
-                            if (Objects.equals(btnSecondaryText, ""))
-                                mContext.btnSecondary.setVisibility(View.INVISIBLE);
-                            if (Objects.equals(btnExtraText, ""))
-                                mContext.btnExtra.setVisibility(View.INVISIBLE);
-                        }
-                        if (!Objects.equals(btnSecondaryText, "") && btnSecondaryClickListener != null) {
-                            mContext.btnSecondary.setText(btnSecondaryText);
-                            setBtnClickListener(mContext.btnSecondary, btnSecondaryClickListener);
-                            mContext.btnSecondary.setEnabled(true);
-                            mContext.btnSecondary.setVisibility(View.VISIBLE);
-                            if (Objects.equals(btnPrimaryText, ""))
-                                mContext.btnPrimary.setVisibility(View.INVISIBLE);
-                            if (Objects.equals(btnExtraText, ""))
-                                mContext.btnExtra.setVisibility(View.INVISIBLE);
-                        }
-                        if (!Objects.equals(btnExtraText, "") && btnExtraClickListener != null) {
-                            mContext.btnExtra.setText(btnExtraText);
-                            setBtnClickListener(mContext.btnExtra, btnExtraClickListener);
-                            mContext.btnExtra.setEnabled(true);
-                            mContext.btnExtra.setVisibility(View.VISIBLE);
-                            if (Objects.equals(btnPrimaryText, ""))
-                                mContext.btnPrimary.setVisibility(View.INVISIBLE);
-                            if (Objects.equals(btnSecondaryText, ""))
-                                mContext.btnSecondary.setVisibility(View.INVISIBLE);
-                        }
+        if (btnExtraClickListener != null && !btnExtraText.isEmpty()) {
+            mContext.btnExtra.setText(btnExtraText);
+            setBtnClickListener(mContext.btnExtra, btnExtraClickListener);
+            mContext.btnExtra.setEnabled(true);
+            mContext.btnExtra.setVisibility(View.VISIBLE);
+            if (Objects.equals(btnPrimaryText, ""))
+                mContext.btnPrimary.setVisibility(View.INVISIBLE);
+            if (Objects.equals(btnSecondaryText, ""))
+                mContext.btnSecondary.setVisibility(View.INVISIBLE);
+        }
 
-                        if (!Objects.equals(progStep, "")) {
-                            mContext.progressText.setText(progStep);
-                            mContext.progressText.setVisibility(View.VISIBLE);
-                        }
+        if (!progStep.isEmpty()) {
+            mContext.progressText.setText(progStep);
+            mContext.progressText.setVisibility(View.VISIBLE);
+        }
 
-                        if (progPercent > -1) {
-                            mContext.progressBar.setProgress(progPercent, true);
-                            mContext.progressBar.setVisibility(View.VISIBLE);
-                        }
+        if (progPercent > -1) {
+            mContext.progressBar.setProgress(progPercent, true);
+            mContext.progressBar.setVisibility(View.VISIBLE);
+        }
 
-                        if (htmlContent != null && !Objects.equals(htmlContent, "")) {
-                            String hexColor = "";
-                            if (htmlColor != 0) {
-                                int colorTextR = Color.red(htmlColor);
-                                int colorTextG = Color.green(htmlColor);
-                                int colorTextB = Color.blue(htmlColor);
-                                hexColor = String.format("; color: #%02x%02x%02x", colorTextR, colorTextG, colorTextB);
-                            }
+        if (htmlContent != null && !htmlContent.isEmpty()) {
+            String hexColor = htmlColor != 0 ? String.format("; color: #%06X", 0xFFFFFF & htmlColor) : "";
+            String html = String.format("<html><head><style>body { font-size: light%s; display:inline; padding:0px; margin:0px; letter-spacing: -0.02; line-height: 1.5; }</style></head><body>%s</body></html>", hexColor, htmlContent);
 
-                            String html = "<html><head><style>body { " +
-                                    "font-size: light" + hexColor + "; " +
-                                    "display:inline; " +
-                                    "padding:0px; " +
-                                    "margin:0px; " +
-                                    "letter-spacing: -0.02; " +
-                                    "line-height: 1.5; }" +
-                                    "</style></head><body>" + htmlContent + "</body></html>";
-                            if (!html.equals(mContext.htmlContentLast)) {
-                                mContext.htmlContentLast = html;
-                                //Log.d(UpdatesActivity.TAG, "Last HTML didn't match, using new HTML: " + mContext.htmlContentLast);
+            if (!html.equals(mContext.htmlContentLast)) {
+                mContext.htmlContentLast = html;
+                mContext.webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+                mContext.webView.setBackgroundColor(Color.TRANSPARENT);
+            }
 
-                                mContext.webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-                                mContext.webView.setBackgroundColor(Color.TRANSPARENT);
-                            }
-                            mContext.webView.getSettings().setBuiltInZoomControls(false);
-                            mContext.webView.setVisibility(View.VISIBLE);
-                        }
-                    }
-                }
-        );
+            mContext.webView.getSettings().setBuiltInZoomControls(false);
+            mContext.webView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideAllViews() {
+        mContext.headerIcon.setVisibility(View.GONE);
+        mContext.headerTitle.setVisibility(View.GONE);
+        mContext.headerStatus.setVisibility(View.GONE);
+        mContext.btnPrimary.setVisibility(View.GONE);
+        mContext.btnSecondary.setVisibility(View.GONE);
+        mContext.btnExtra.setVisibility(View.GONE);
+        mContext.progressText.setVisibility(View.GONE);
+        mContext.progressBar.setVisibility(View.GONE);
+        mContext.webView.setVisibility(View.GONE);
+        mContext.progressBar.setScaleY(1.0f);
     }
 
     private void setBtnClickListener(Button btn, View.OnClickListener clickListener) {
@@ -154,9 +137,9 @@ public class Page {
                 }
                 if (activity == null) {
                     clickListener.onClick(v);
-                    return;
+                } else {
+                    activity.runOnUiThread(() -> clickListener.onClick(v));
                 }
-                clickListener.onClick(v);
             }
         });
     }
