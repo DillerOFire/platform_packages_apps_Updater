@@ -52,37 +52,25 @@ public class Page {
             mContext.headerStatus.setVisibility(View.VISIBLE);
         }
 
-        if (btnPrimaryClickListener != null && !btnPrimaryText.isEmpty()) {
+        if (!btnPrimaryText.isEmpty()) {
             mContext.btnPrimary.setText(btnPrimaryText);
             setBtnClickListener(mContext.btnPrimary, btnPrimaryClickListener);
             mContext.btnPrimary.setEnabled(true);
             mContext.btnPrimary.setVisibility(View.VISIBLE);
-            if (Objects.equals(btnSecondaryText, ""))
-                mContext.btnSecondary.setVisibility(View.INVISIBLE);
-            if (Objects.equals(btnExtraText, ""))
-                mContext.btnExtra.setVisibility(View.INVISIBLE);
         }
 
-        if (btnSecondaryClickListener != null && !btnSecondaryText.isEmpty()) {
+        if (!btnSecondaryText.isEmpty()) {
             mContext.btnSecondary.setText(btnSecondaryText);
             setBtnClickListener(mContext.btnSecondary, btnSecondaryClickListener);
             mContext.btnSecondary.setEnabled(true);
             mContext.btnSecondary.setVisibility(View.VISIBLE);
-            if (Objects.equals(btnPrimaryText, ""))
-                mContext.btnPrimary.setVisibility(View.INVISIBLE);
-            if (Objects.equals(btnExtraText, ""))
-                mContext.btnExtra.setVisibility(View.INVISIBLE);
         }
 
-        if (btnExtraClickListener != null && !btnExtraText.isEmpty()) {
+        if (!btnExtraText.isEmpty()) {
             mContext.btnExtra.setText(btnExtraText);
             setBtnClickListener(mContext.btnExtra, btnExtraClickListener);
             mContext.btnExtra.setEnabled(true);
             mContext.btnExtra.setVisibility(View.VISIBLE);
-            if (Objects.equals(btnPrimaryText, ""))
-                mContext.btnPrimary.setVisibility(View.INVISIBLE);
-            if (Objects.equals(btnSecondaryText, ""))
-                mContext.btnSecondary.setVisibility(View.INVISIBLE);
         }
 
         if (!progStep.isEmpty()) {
