@@ -69,6 +69,9 @@ message DeviceState {
 
   // HWID
   string hw_id = 8;
+
+  // Patron ID
+  string patron_id = 9;
 }
 
 message ApexInfo {

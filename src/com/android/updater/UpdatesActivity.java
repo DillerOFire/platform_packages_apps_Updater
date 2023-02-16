@@ -9,6 +9,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.icu.text.DateFormat;
 import android.icu.text.NumberFormat;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -235,6 +236,16 @@ public class UpdatesActivity extends AppCompatActivity {
         //Allow using shared preferences
         prefs = PreferenceManager.getDefaultSharedPreferences(activity);
         prefsEditor = prefs.edit();
+
+        Intent intent = getIntent();
+        Uri data = intent.getData();
+        if (data != null) {
+            List<String> pathSegments = data.getPathSegments();
+            if (pathSegments.size() == 2 && "patron".equals(pathSegments.get(0))) {
+                String id = pathSegments.get(1);
+                prefsEditor.putString("patronID", id).apply();
+            }
+        }
 
         //Load shared preferences
         if (update == null) {
@@ -663,6 +674,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 request.setTimestamp(buildTimestamp);
                 request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
                 request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
+                request.setPatronId(prefs.getString("patronID", ""));
                 request.setHwId(android_id);
 
                 Boolean testing = true;
@@ -706,7 +718,6 @@ public class UpdatesActivity extends AppCompatActivity {
 
                     Log.d(TAG, "Saving update for " + updateId);
                     prefsEditor.putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply();
-                    prefsEditor.apply();
                 } catch (Exception e) {
                     Log.e(TAG, "Error while parsing updates proto: " + e);
                     exception = e;
@@ -746,7 +757,6 @@ public class UpdatesActivity extends AppCompatActivity {
 
                 Log.d(TAG, "Saving changelog");
                 prefsEditor.putString("changelog", htmlChangelog).apply();
-                prefsEditor.apply();
 
                 setUpdating(true);
 
@@ -835,7 +845,6 @@ public class UpdatesActivity extends AppCompatActivity {
         wasUpdating = updating;
         //Log.d(TAG, "Set updating: " + updating);
         prefsEditor.putBoolean("updating", updating).apply();
-        prefsEditor.apply();
     }
 
     @Override

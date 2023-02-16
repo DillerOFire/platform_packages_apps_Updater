@@ -45,6 +45,13 @@
                 <category android:name="com.android.settings.SHORTCUT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="updater" android:host="enroll" android:pathPrefix="/patron/" />
+            </intent-filter>
         </activity>
 
         <service android:name=".controller.UpdaterService" />
