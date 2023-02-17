@@ -90,4 +90,5 @@
     <string name="system_update_update_checking">Checking for updates…</string>
     <string name="system_update_update_failed">Try again</string>
     <string name="system_update_update_now">Download &amp; install</string>
+    <string name="system_update_battery_low">Battery too low or in battery saving mode</string>
 </resources>

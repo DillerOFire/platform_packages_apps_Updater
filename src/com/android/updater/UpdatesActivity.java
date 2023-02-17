@@ -18,6 +18,7 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.StrictMode;
 import android.os.SystemProperties;
+import android.os.BatteryManager;
 import android.os.UpdateEngine;
 import android.os.UpdateEngineCallback;
 import android.provider.Settings;
@@ -83,6 +84,8 @@ public class UpdatesActivity extends AppCompatActivity {
     public String htmlContentLast = "";
 
     //Special details
+    private Handler mHandler;
+    private Runnable mRunnable;
     private UpdateInfo update;
     private com.android.updater.protos.OtaMetadata build;
     private String updateId = "";
@@ -177,14 +180,47 @@ public class UpdatesActivity extends AppCompatActivity {
         renderPage(pageId);
     }
 
-    public void renderPageCustom(String pageId, Page page) {
-        registerPage(pageId, page);
+    public void renderPageBatteryCheck(String pageId, String progressStep) {
+        Page page = getPage(pageId);
+        page.progPercent = 1;
+        page.progStep = progressStep;
+        progressBar.setIndeterminate(true);
+
+        renderPage(pageId);
+
+        // Create a new handler if it doesn't exist yet
+        if (mHandler == null) {
+            mHandler = new Handler();
+        }
+
+        // Create a new runnable if it doesn't exist yet
+        if (mRunnable == null) {
+            mRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (isBatteryLevelOk()) {
+                        page.progStep = "";
+                        renderPage(pageId);
+                        mHandler.removeCallbacks(this);
+                        mRunnable = null;
+                    } else {
+                        // Schedule the runnable to run again after a delay of 5 seconds
+                        mHandler.postDelayed(this, 3000);
+                    }
+                }
+            };
+        }
+
+        mHandler.postDelayed(mRunnable, 3000);
+
         renderPage(pageId);
     }
+
     private void registerPage(String pageId, Page page) {
         //Log.d(TAG, "Register page: " + pageId);
         pages.put(pageId, page);
     }
+
     //A helpful wrapper that refreshes all of our pages for major content updates
     private void registerPages() {
         registerPage("error", pageError());
@@ -675,8 +711,7 @@ public class UpdatesActivity extends AppCompatActivity {
                 request.setPatronId(prefs.getString("patronID", ""));
                 request.setHwId(androidId);
 
-                Boolean testing = true;
-                if (BuildConfig.DEBUG && testing) {
+                if (BuildConfig.DEBUG) {
                     request.clearDevice();
                     request.clearBuild();
                     request.clearTimestamp();
@@ -765,16 +800,37 @@ public class UpdatesActivity extends AppCompatActivity {
         }).start();
     }
 
+    private boolean isBatteryLevelOk() {
+        Intent intent = activity.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (!intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, false)) {
+            return true;
+        }
+
+        int percent = Math.round(100.f * intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 100) / intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
+        int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL;
+        PowerManager powerManager = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+        boolean isBatterySaverOn = powerManager.isPowerSaveMode();
+        int required = isCharging ? 40 : 50;
+
+        return !isBatterySaverOn && percent >= required;
+    }
+
     private void download() {
-        //Reset the page entirely
-        registerPage("updateDownloading", pageUpdateDownloading());
-        renderPage("updateDownloading");
-        renderPageProgress("updateDownloading", -1, "");
+        if (isBatteryLevelOk()) {
+            //Reset the page entirely
+            registerPage("updateDownloading", pageUpdateDownloading());
+            renderPage("updateDownloading");
+            renderPageProgress("updateDownloading", -1, "");
 
-        Log.d(TAG, "Starting download!");
-        setUpdating(true);
+            Log.d(TAG, "Starting download!");
 
-        mUpdaterController.startDownload(updateId);
+            setUpdating(true);
+
+            mUpdaterController.startDownload(updateId);
+        } else {
+            renderPageBatteryCheck("updateAvailable", getString(R.string.system_update_battery_low));
+        }
     }
 
     private void downloadCancel() {
