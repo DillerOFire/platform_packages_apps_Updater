@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2022 The LineageOS Project
+// Copyright (C) 2022 Raphielscape LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,35 +14,17 @@
 // limitations under the License.
 //
 
-android_app {
-    name: "Updater",
-
-    // Include SettingsLib and its dependencies
-    defaults: ["SettingsLibDefaults"],
-
-    srcs: ["src/**/*.java"],
-    resource_dirs: ["res"],
-    asset_dirs: ["assets"],
-
-    static_libs: [
-        "com.google.android.material_material",
-        "androidx.core_core",
-        "androidx.appcompat_appcompat",
-        "androidx.cardview_cardview",
-        "androidx.localbroadcastmanager_localbroadcastmanager",
-        "androidx.preference_preference",
-        "androidx.recyclerview_recyclerview",
-    ],
-
-    platform_apis: true,
-    privileged: true,
-    certificate: "platform",
-    system_ext_specific: true,
-    optimize: {
-        proguard_flags_files: ["proguard.flags"],
-    },
-
-    required: [
+android_app_import {
+	name: "Updater",
+	owner: "hentai",
+	apk: "release/packages_apps_Updater-release.apk",
+	certificate: "platform",
+	dex_preopt: {
+		enabled: true,
+	},
+	privileged: true,
+	system_ext_specific: true,
+	required: [
         "privapp_whitelist_com.android.updater",
         "default-permissions_com.android.updater"
     ],
@@ -63,3 +45,4 @@ prebuilt_etc {
     src: "default-permissions_com.android.updater.xml",
     filename_from_src: true,
 }
+
