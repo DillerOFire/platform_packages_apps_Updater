@@ -22,6 +22,9 @@ allprojects {
 }
 
 buildscript {
+    ext {
+        kotlin_version = '1.8.10'
+    }
     repositories {
         google()
         mavenCentral()
@@ -30,6 +33,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:7.3.1'
         classpath "com.google.protobuf:protobuf-gradle-plugin:0.9.1"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -39,6 +43,7 @@ keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 apply plugin: 'com.android.application'
 apply plugin: "com.google.protobuf"
+apply plugin: 'org.jetbrains.kotlin.android'
 
 protobuf {
     protoc {
@@ -116,6 +121,7 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.core:core-ktx:+'
     compileOnly files('./system_libs/framework.jar')
     compileOnly files('./system_libs/classes.jar')
     compileOnly files('./system_libs/classes2.jar')

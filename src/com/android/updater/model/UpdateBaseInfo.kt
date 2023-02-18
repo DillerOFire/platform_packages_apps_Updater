@@ -13,28 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.updater.model;
+package com.android.updater.model
 
-import java.io.File;
-
-public interface UpdateInfo extends UpdateBaseInfo {
-    UpdateStatus getStatus();
-
-    int getPersistentStatus();
-
-    File getFile();
-
-    long getFileSize();
-
-    int getProgress();
-
-    long getEta();
-
-    long getSpeed();
-
-    int getInstallProgress();
-
-    boolean getAvailableOnline();
-
-    boolean getFinalizing();
+interface UpdateBaseInfo {
+    val name: String
+    val downloadId: String
+    val timestamp: Long
+    val type: Int
+    val version: String
+    val downloadUrl: String
+    val fileSize: Long
+    val changelogUrl: String
 }

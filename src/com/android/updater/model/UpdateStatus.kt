@@ -13,24 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.updater.misc;
+package com.android.updater.model
 
-import android.os.SystemProperties;
+enum class UpdateStatus {
+    UNKNOWN, STARTING, DOWNLOADING, PAUSED, PAUSED_ERROR, DELETED, VERIFYING, VERIFIED, VERIFICATION_FAILED, INSTALLING, INSTALLED, INSTALLATION_FAILED, INSTALLATION_CANCELLED, INSTALLATION_SUSPENDED;
 
-public final class BuildInfoUtils {
-
-    private BuildInfoUtils() {
-    }
-
-    public static long getBuildDateTimestamp() {
-        return SystemProperties.getLong(Constants.PROP_BUILD_DATE, 0);
-    }
-
-    public static String getBuildSecurityPatchTimestamp() {
-        return SystemProperties.get(Constants.PROP_BUILD_SECURITY_PATCH);
-    }
-
-    public static String getBuildVersion() {
-        return SystemProperties.get(Constants.PROP_BUILD_VERSION);
+    object Persistent {
+        const val UNKNOWN = 0
+        const val INCOMPLETE = 1
+        const val VERIFIED = 2
     }
 }
