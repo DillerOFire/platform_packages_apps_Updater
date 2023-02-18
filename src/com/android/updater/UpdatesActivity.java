@@ -9,6 +9,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.icu.text.DateFormat;
 import android.icu.text.NumberFormat;
+import android.icu.text.SimpleDateFormat;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,6 +25,7 @@ import android.provider.Settings;
 import android.text.format.Formatter;
 import android.util.Base64;
 import android.util.Log;
+import android.view.WindowManager;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -34,6 +36,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
+import com.android.updater.protos.OtaMetadata;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.android.updater.controller.UpdaterController;
@@ -241,6 +244,7 @@ public class UpdatesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.page_updates);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         //Allow doing stupid things like running network operations on the main activity thread
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -697,28 +701,37 @@ public class UpdatesActivity extends AppCompatActivity {
                 request.setTimestamp(buildTimestamp);
                 request.setSdkLevel(SystemProperties.get("ro.build.version.sdk"));
                 request.setSecurityPatchLevel(SystemProperties.get("ro.build.version.security_patch"));
-                request.setHwId(android_id);
 
-                if (BuildConfig.DEBUG) {
-                    request.clearDevice();
-                    request.clearBuild();
-                    request.clearTimestamp();
-                    request.addDevice("alioth");
-                    request.addBuild("Redmi/alioth/alioth:13/TQ1A.230205.002/23020840:user/release-keys");
-                    request.setTimestamp(1665584742);
-                }
+//                if (BuildConfig.DEBUG) {
+//                    request.clearDevice();
+//                    request.clearBuild();
+//                    request.clearTimestamp();
+//                    request.addDevice("alioth");
+//                    request.addBuild("Redmi/alioth/alioth:13/TQ1A.230205.002/23020840:user/release-keys");
+//                    request.setTimestamp(1665584742);
+//                }
 
                 DeviceState req = request.build();
 
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setDoOutput(true);
-                urlConnection.setDoInput(true);
-                urlConnection.setRequestMethod("POST");
-                req.writeTo(urlConnection.getOutputStream());
+//                urlConnection.setDoOutput(true);
+//                urlConnection.setDoInput(true);
+//                urlConnection.setRequestMethod("POST");
+//                req.writeTo(urlConnection.getOutputStream());
 
-                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-                byte[] buildBytes = in.readAllBytes();
-                build = com.android.updater.protos.OtaMetadata.parseFrom(buildBytes);
+//                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+//                byte[] buildBytes = in.readAllBytes();
+//                build = OtaMetadata.parseFrom(buildBytes);
+//                Log.d(TAG, "refresh: " + );
+                build = OtaMetadata.newBuilder()
+                        .setOriginalFilename("/hentai_lavender-TwistedScarlett-ota-tq1a.230205.002-Furry.02151931.zip")
+                        .setCurrentDownloadUrl("https://sfire.site/hentai_lavender-TwistedScarlett-ota-tq1a.230205.002-Furry.02151931.zip")
+                        .setChangelogUrl("https://api.sfire.site/api/changelog")
+                        .setType(OtaMetadata.OtaType.UNKNOWN)
+                        .setSizeBytes(1968969969)
+                        .setWipe(false)
+                        .setDowngrade(false)
+                        .build();
 
                 try {
                     update = Utils.parseProtoUpdate(build);
@@ -731,8 +744,6 @@ public class UpdatesActivity extends AppCompatActivity {
                         mUpdaterController.setUpdatesAvailableOnline(updatesOnline, true);
                     }
 
-                    Log.d(TAG, "Saving update for " + updateId);
-                    prefsEditor.putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply();
                 } catch (Exception e) {
                     Log.e(TAG, "Error while parsing updates proto: " + e);
                     exception = e;

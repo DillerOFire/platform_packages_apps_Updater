@@ -96,7 +96,20 @@ android {
             storeFile file(keystoreProperties['storeFile'])
             storePassword keystoreProperties['storePassword']
         }
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
     }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+
     lint {
         ignore 'ProtectedPermissions', 'ExtraTranslation', 'ImpliedQuantity', 'MissingQuantity', 'MissingTranslation'
     }
@@ -106,13 +119,13 @@ dependencies {
     compileOnly files('./system_libs/framework.jar')
     compileOnly files('./system_libs/classes.jar')
     compileOnly files('./system_libs/classes2.jar')
-    compileOnly files('./system_libs/classes3.jar')
-    compileOnly files('./system_libs/classes4.jar')
+//    compileOnly files('./system_libs/classes3.jar')
+//    compileOnly files('./system_libs/classes4.jar')
 
-    implementation 'com.google.android.material:material:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.preference:preference:1.1.0'
+    implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'com.google.protobuf:protobuf-lite:3.0.0'
 }

@@ -28,7 +28,8 @@
           {type} - Build type
           {incr} - Incremental version
     -->
-    <string name="updater_server_url" translatable="false">https://get.hentaios.com/kivotos/v0/rest</string>
+    <string name="updater_server_url" translatable="false">https://api.sfire.site/api/updater</string>
+    <string name="updater_server_url_changelog" translatable="false">https://api.sfire.site/api/changelog</string>
 
     <string name="update_failed_notification">Could not update</string>
 

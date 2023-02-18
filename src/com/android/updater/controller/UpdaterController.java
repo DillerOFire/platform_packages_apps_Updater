@@ -365,10 +365,10 @@ public class UpdaterController {
             return;
         }
         Update update = entry.mUpdate;
-        File destination = new File(mDownloadRoot, update.getName());
+        File destination = new File(mDownloadRoot + update.getName());
         if (destination.exists()) {
             destination = Utils.appendSequentialNumber(destination);
-            Log.d(TAG, "Changing name with " + destination.getName());
+            Log.d(TAG, "Changing name with " + destination.getAbsolutePath());
         }
         update.setFile(destination);
         DownloadClient downloadClient;
