@@ -46,6 +46,7 @@ import com.android.updater.model.DeviceState
 import com.android.updater.model.OtaMeta
 import com.android.updater.model.UpdateInfo
 import com.android.updater.model.UpdateStatus
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
@@ -405,10 +406,16 @@ class UpdatesActivity : AppCompatActivity() {
         }
 
 
-        lifecycleScope.launch {
-            viewModel.metadata.collect { meta ->
+        // TODO: Make states work
+        lifecycleScope.launchWhenCreated {
+            viewModel.metadata
+                .collect { meta ->
                 if (meta != null)
                     onMetaCollected(meta)
+                else {
+                    Log.d(TAG, "Meta is null")
+                    renderPage("checkForUpdates")
+                }
             }
 
         }
@@ -601,7 +608,16 @@ class UpdatesActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        viewModel.refresh(Utils.getServerURL(this))
+        if (mUpdaterController == null) {
+            Log.e(TAG, "mUpdaterController is null during update check")
+            renderPage("checkForUpdates")
+            return
+        }
+        Log.d(TAG, "Checking for updates!")
+        setUpdating(false)
+        updateCheck = true
+        renderPage("updateChecking")
+        viewModel.refresh(Utils.getServerURL(this), SystemProperties.get("ro.build.date.utc").toLong())
     }
 
     private val isBatteryLevelOk: Boolean
@@ -764,15 +780,6 @@ class UpdatesActivity : AppCompatActivity() {
 
     @SuppressLint("HardwareIds")
     private fun onMetaCollected(build: OtaMeta) {
-        if (mUpdaterController == null) {
-            Log.e(TAG, "mUpdaterController is null during update check")
-            renderPage("checkForUpdates")
-            return
-        }
-        Log.d(TAG, "Checking for updates!")
-        setUpdating(false)
-        updateCheck = true
-        renderPage("updateChecking")
         Thread(Runnable {
             try {
                 Thread.sleep(1500)

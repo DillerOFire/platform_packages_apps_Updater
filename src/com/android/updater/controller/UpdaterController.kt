@@ -317,7 +317,7 @@ class UpdaterController private constructor(context: Context) {
             return
         }
         val update = entry.mUpdate
-        var destination: File? = File(mDownloadRoot.toString() + update.name)
+        var destination: File? = File(mDownloadRoot, update.name)
         if (destination!!.exists()) {
             destination = Utils.appendSequentialNumber(destination)
             Log.d(TAG, "Changing name with " + destination.absolutePath)
