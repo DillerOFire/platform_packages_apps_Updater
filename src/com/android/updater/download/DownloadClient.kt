@@ -56,6 +56,7 @@ interface DownloadClient {
         private var mCallback: DownloadCallback? = null
         private var mProgressListener: ProgressListener? = null
         private var mUseDuplicateLinks = false
+
         @Throws(IOException::class)
         fun build(): DownloadClient {
             checkNotNull(mUrl) { "No download URL defined" }

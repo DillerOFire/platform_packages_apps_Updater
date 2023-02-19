@@ -66,7 +66,7 @@ class UpdaterService : Service() {
             get() = this@UpdaterService
     }
 
-    override fun onBind(intent: Intent): IBinder? {
+    override fun onBind(intent: Intent): IBinder {
         mHasClients = true
         return mBinder
     }

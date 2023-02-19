@@ -267,7 +267,7 @@ class UpdaterController private constructor(context: Context) {
             val online = downloadIds.contains(entry.mUpdate.downloadId)
             entry.mUpdate.availableOnline = online
             if (!online && purgeList && entry.mUpdate.persistentStatus == Persistent.UNKNOWN) {
-                entry.mUpdate.downloadId?.let { toRemove.add(it) }
+                entry.mUpdate.downloadId.let { toRemove.add(it) }
             }
         }
         for (downloadId in toRemove) {
@@ -415,7 +415,7 @@ class UpdaterController private constructor(context: Context) {
             if (file != null && file.exists() && !file.delete()) {
                 Log.e(TAG, "Could not delete " + file.absolutePath)
             }
-            update.downloadId?.let { mUpdatesDbHelper.removeUpdate(it) }
+            update.downloadId.let { mUpdatesDbHelper.removeUpdate(it) }
         }.start()
     }
 
@@ -500,6 +500,7 @@ class UpdaterController private constructor(context: Context) {
         const val EXTRA_DOWNLOAD_ID = "extra_download_id"
         private var sUpdaterController: UpdaterController? = null
         private const val MAX_REPORT_INTERVAL_MS = 100
+
         @Synchronized
         fun getInstance(context: Context): UpdaterController? {
             if (sUpdaterController == null) {

@@ -1,4 +1,4 @@
-package com.android.updater
+package com.android.updater.ui
 
 import android.app.Activity
 import android.content.ContextWrapper
@@ -18,7 +18,7 @@ class Page {
     var btnExtraClickListener: View.OnClickListener? = null
     var progStep = ""
     var progPercent = -1
-    var htmlContent: String? = ""
+    var htmlContent: String = ""
     var htmlColor = 0
     var runnable = Runnable {
         //We don't do anything right now!

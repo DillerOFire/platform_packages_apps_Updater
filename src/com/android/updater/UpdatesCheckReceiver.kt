@@ -28,13 +28,14 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
 import com.android.updater.R
-import com.android.updater.UpdatesActivity
 import com.android.updater.misc.Utils
-import com.android.updater.protos.OtaMetadata
-import java.io.BufferedInputStream
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import com.android.updater.model.OtaMeta
+import com.android.updater.ui.UpdatesActivity
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Date
 
 class UpdatesCheckReceiver : BroadcastReceiver() {
@@ -55,18 +56,19 @@ class UpdatesCheckReceiver : BroadcastReceiver() {
             scheduleUpdatesCheck(context)
             return
         }
+
+        //TODO: It shouldn't be like that
         try {
-            val urlOTA = Utils.getServerURL(context)
-            val url = URL(urlOTA)
-            val urlConnection = url.openConnection() as HttpURLConnection
-            val `in`: InputStream = BufferedInputStream(urlConnection.inputStream)
-            val buildBytes = `in`.readAllBytes()
-            val build = OtaMetadata.parseFrom(buildBytes)
-            Log.d(UpdatesCheckReceiver.Companion.TAG, "Saving update for " + build.originalFilename)
-            preferences.edit().putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply()
-            preferences.edit().commit()
+            CoroutineScope(Dispatchers.IO).launch {
+                val urlOTA = Utils.getServerURL(context)
+                val build = Utils.client.get(urlOTA).body<OtaMeta>()
+                val buildBytes = build.toByteArray()
+                Log.d(TAG, "Saving update for " + build.originalFilename)
+                preferences.edit().putString("update", Base64.encodeToString(buildBytes, Base64.DEFAULT)).apply()
+                preferences.edit().commit()
+            }
         } catch (e: Exception) {
-            Log.e(UpdatesCheckReceiver.Companion.TAG, "Failed to perform scheduled update check", e)
+            Log.e(TAG, "Failed to perform scheduled update check", e)
         }
     }
 
@@ -79,11 +81,11 @@ class UpdatesCheckReceiver : BroadcastReceiver() {
             val notificationManager = context.getSystemService(
                     NotificationManager::class.java)
             val notificationChannel = NotificationChannel(
-                    UpdatesCheckReceiver.Companion.NEW_UPDATES_NOTIFICATION_CHANNEL,
+                    NEW_UPDATES_NOTIFICATION_CHANNEL,
                     context.getString(R.string.new_updates_channel_title),
                     NotificationManager.IMPORTANCE_LOW)
             val notificationBuilder: NotificationCompat.Builder = NotificationCompat.Builder(context,
-                    UpdatesCheckReceiver.Companion.NEW_UPDATES_NOTIFICATION_CHANNEL)
+                    NEW_UPDATES_NOTIFICATION_CHANNEL)
             notificationBuilder.setSmallIcon(R.drawable.ic_system_update_dl)
             val notificationIntent = Intent(context, UpdatesActivity::class.java)
             val intent = PendingIntent.getActivity(context, 0, notificationIntent,
@@ -97,7 +99,7 @@ class UpdatesCheckReceiver : BroadcastReceiver() {
 
         private fun getRepeatingUpdatesCheckIntent(context: Context): PendingIntent {
             val intent = Intent(context, UpdatesCheckReceiver::class.java)
-            intent.action = UpdatesCheckReceiver.Companion.DAILY_CHECK_ACTION
+            intent.action = DAILY_CHECK_ACTION
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         }
 
@@ -107,7 +109,7 @@ class UpdatesCheckReceiver : BroadcastReceiver() {
         }
 
         fun scheduleRepeatingUpdatesCheck(context: Context) {
-            val updateCheckIntent: PendingIntent = UpdatesCheckReceiver.Companion.getRepeatingUpdatesCheckIntent(context)
+            val updateCheckIntent: PendingIntent = getRepeatingUpdatesCheckIntent(context)
             val alarmMgr = context.getSystemService(AlarmManager::class.java)
             alarmMgr.setRepeating(AlarmManager.RTC, System.currentTimeMillis() +
                     AlarmManager.INTERVAL_DAY, AlarmManager.INTERVAL_DAY,

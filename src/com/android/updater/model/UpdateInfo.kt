@@ -21,7 +21,7 @@ interface UpdateInfo : UpdateBaseInfo {
     val status: UpdateStatus?
     val persistentStatus: Int
     val file: File?
-    abstract override val fileSize: Long
+    override val fileSize: Long
     val progress: Int
     val eta: Long
     val speed: Long

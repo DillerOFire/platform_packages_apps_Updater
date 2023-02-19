@@ -28,6 +28,7 @@ import java.nio.channels.ReadableByteChannel
 
 object FileUtils {
     private const val TAG = "FileUtils"
+
     @Throws(IOException::class)
     fun copyFile(sourceFile: File?, destFile: File, progressCallBack: ProgressCallBack?) {
         try {
@@ -95,6 +96,7 @@ object FileUtils {
                                       private val mCallback: ProgressCallBack) : ReadableByteChannel {
         private var mSizeRead: Long = 0
         private var mProgress = 0
+
         @Throws(IOException::class)
         override fun close() {
             mReadableByteChannel.close()

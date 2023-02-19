@@ -1,5 +1,6 @@
-package com.android.updater
+package com.android.updater.ui
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -21,7 +22,6 @@ import android.os.UpdateEngine
 import android.os.UpdateEngineCallback
 import android.provider.Settings
 import android.text.format.Formatter
-import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -30,25 +30,27 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import com.android.updater.R
 import com.android.updater.controller.UpdaterController
 import com.android.updater.controller.UpdaterService
 import com.android.updater.controller.UpdaterService.LocalBinder
 import com.android.updater.misc.BuildInfoUtils
 import com.android.updater.misc.StringGenerator
 import com.android.updater.misc.Utils
+import com.android.updater.model.DeviceState
+import com.android.updater.model.OtaMeta
 import com.android.updater.model.UpdateInfo
 import com.android.updater.model.UpdateStatus
-import com.android.updater.protos.DeviceState
-import com.android.updater.protos.OtaMetadata
-import com.google.protobuf.InvalidProtocolBufferException
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
-import java.net.HttpURLConnection
 import java.net.URL
 
 class UpdatesActivity : AppCompatActivity() {
@@ -56,6 +58,9 @@ class UpdatesActivity : AppCompatActivity() {
     private var activity: UpdatesActivity? = null
     private var prefs: SharedPreferences? = null
     private var prefsEditor: SharedPreferences.Editor? = null
+
+    //Updates viewModel
+    private val viewModel: UpdatesViewModel by viewModels()
 
     //The map of the hour, "pageId" = Page
     private val pages = HashMap<String?, Page?>()
@@ -77,14 +82,14 @@ class UpdatesActivity : AppCompatActivity() {
     private var mHandler: Handler? = null
     private var mRunnable: Runnable? = null
     private var update: UpdateInfo? = null
-    private var build: OtaMetadata? = null
+    private var build: OtaMeta? = null
     private var updateId: String = ""
     private var wasUpdating = false
     private var updateCheck = false
     private var installingUpdate = false
     private var htmlColor = 0
     private var htmlCurrentBuild = ""
-    private var htmlChangelog: String? = ""
+    private var htmlChangelog: String = ""
 
     //Android services
     private var mUpdaterService: UpdaterService? = null
@@ -133,7 +138,7 @@ class UpdatesActivity : AppCompatActivity() {
         }
         val finalPage = page // Make page final to use it in the runOnUiThread
         runOnUiThread {
-            finalPage!!.render(this)
+            finalPage.render(this)
             if (!finalPage.runnableRan) {
                 finalPage.runnableRan = true
                 val thread = Thread(finalPage.runnable)
@@ -245,21 +250,22 @@ class UpdatesActivity : AppCompatActivity() {
         prefsEditor = prefs?.edit()
 
         //Load shared preferences
-        if (update == null) {
-            val buildB64 = prefs?.getString("update", "")
-            if (buildB64 != "") {
-                try {
-                    val buildBytes = Base64.decode(buildB64, Base64.DEFAULT)
-                    build = OtaMetadata.parseFrom(buildBytes)
-                    update = Utils.parseProtoUpdate(build)
-                    updateId = update!!.downloadId!!
-                } catch (e: InvalidProtocolBufferException) {
-                    Log.e(TAG, "Failed to load saved update from prefs", e)
-                }
-            } else {
-                Log.d(TAG, "No saved update found")
-            }
-        }
+        //TODO:
+//        if (update == null) {
+//            val buildB64 = prefs?.getString("update", "")
+//            if (buildB64 != "") {
+//                try {
+//                    val buildBytes = Base64.decode(buildB64, Base64.DEFAULT)
+//                    build = OtaMetadata.parseFrom(buildBytes)
+//                    update = Utils.parseProtoUpdate(build)
+//                    updateId = update!!.downloadId!!
+//                } catch (e: InvalidProtocolBufferException) {
+//                    Log.e(TAG, "Failed to load saved update from prefs", e)
+//                }
+//            } else {
+//                Log.d(TAG, "No saved update found")
+//            }
+//        }
 
         //Note that, regardless of whether the activity is open, these callbacks will still execute!
         //That means we still update pages in the background based on the update's progress
@@ -305,7 +311,7 @@ class UpdatesActivity : AppCompatActivity() {
         mBroadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 //Log.d(TAG, "Received intent: " + intent.getAction());
-                val downloadId = intent.getStringExtra(UpdaterController.Companion.EXTRA_DOWNLOAD_ID)
+                val downloadId = intent.getStringExtra(UpdaterController.EXTRA_DOWNLOAD_ID)
                 if (downloadId == "") {
                     Log.e(TAG, "Received intent " + intent.action + " without downloadId?")
                     return
@@ -315,7 +321,7 @@ class UpdatesActivity : AppCompatActivity() {
                     return
                 }
                 update = mUpdaterService!!.updaterController!!.getUpdate(downloadId)
-                if (UpdaterController.Companion.ACTION_UPDATE_STATUS == intent.action) {
+                if (UpdaterController.ACTION_UPDATE_STATUS == intent.action) {
                     when (update!!.status) {
                         UpdateStatus.PAUSED_ERROR -> {
                             installingUpdate = false
@@ -346,12 +352,12 @@ class UpdatesActivity : AppCompatActivity() {
 
                         else -> {}
                     }
-                } else if (UpdaterController.Companion.ACTION_DOWNLOAD_PROGRESS == intent.action) {
+                } else if (UpdaterController.ACTION_DOWNLOAD_PROGRESS == intent.action) {
                     registerPage("updateDownloading", pageUpdateDownloading())
                     val percentage = NumberFormat.getPercentInstance().format((update!!.progress / 100f).toDouble())
                     val progStep = percentage + " • " + getString(R.string.system_update_system_update_downloading_title_text)
                     if (pageIdActive == "updateDownloading") renderPageProgress("updateDownloading", update!!.progress, progStep)
-                } else if (UpdaterController.Companion.ACTION_INSTALL_PROGRESS == intent.action) {
+                } else if (UpdaterController.ACTION_INSTALL_PROGRESS == intent.action) {
                     registerPage("updateInstalling", pageUpdateInstalling())
                     var progStep = getString(R.string.system_update_prepare_install)
                     if (mUpdaterController!!.isInstallingABUpdate) {
@@ -384,7 +390,7 @@ class UpdatesActivity : AppCompatActivity() {
             }
         }
         Log.d(TAG, "Loading pageId $pageIdActive")
-        htmlChangelog = prefs!!.getString("changelog", "")
+        htmlChangelog = prefs!!.getString("changelog", "").orEmpty()
         //Log.d(TAG, "Loading changelog: " + htmlChangelog);
 
         //Import and fill in the pages for the first time
@@ -396,6 +402,15 @@ class UpdatesActivity : AppCompatActivity() {
             mUpdateEngine!!.bind(mUpdateEngineCallback)
         } catch (e: Exception) {
             Log.i(TAG, "No update engine found")
+        }
+
+
+        lifecycleScope.launch {
+            viewModel.metadata.collect { meta ->
+                if (meta != null)
+                    onMetaCollected(meta)
+            }
+
         }
     }
 
@@ -586,129 +601,11 @@ class UpdatesActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        if (mUpdaterController == null) {
-            Log.e(TAG, "mUpdaterController is null during update check")
-            renderPage("checkForUpdates")
-            return
-        }
-        Log.d(TAG, "Checking for updates!")
-        setUpdating(false)
-        updateCheck = true
-        renderPage("updateChecking")
-        Thread(Runnable {
-            try {
-                Thread.sleep(1500)
-
-                // Remove all current downloads
-                removeDownloads()
-                val urlOTA = Utils.getServerURL(this)
-                val url = URL(urlOTA)
-                var androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-                val earlyUpdates = prefs!!.getInt("earlyUpdates", 0)
-                if (earlyUpdates <= 0) {
-                    androidId = "0"
-                }
-                val buildTimestamp = SystemProperties.get("ro.build.date.utc").toLong()
-                var buildIncremental: Long = 0
-                try {
-                    buildIncremental = SystemProperties.get("ro.build.version.incremental").toLong()
-                } catch (e: Exception) {
-                    Log.d(TAG, "Failed to parse ro.build.version.incremental, is this an official build?")
-                }
-                val request = DeviceState.newBuilder()
-                request.addDevice(SystemProperties.get("ro.product.vendor.device"))
-                request.addBuild(SystemProperties.get("ro.vendor.build.fingerprint"))
-                request.buildIncremental = buildIncremental
-                request.timestamp = buildTimestamp
-                request.sdkLevel = SystemProperties.get("ro.build.version.sdk")
-                request.securityPatchLevel = SystemProperties.get("ro.build.version.security_patch")
-
-//                if (BuildConfig.DEBUG) {
-//                    request.clearDevice();
-//                    request.clearBuild();
-//                    request.clearTimestamp();
-//                    request.addDevice("alioth");
-//                    request.addBuild("Redmi/alioth/alioth:13/TQ1A.230205.002/23020840:user/release-keys");
-//                    request.setTimestamp(1665584742);
-//                }
-                val req = request.build()
-                val urlConnection = url.openConnection() as HttpURLConnection
-                //                urlConnection.setDoOutput(true);
-//                urlConnection.setDoInput(true);
-//                urlConnection.setRequestMethod("POST");
-//                req.writeTo(urlConnection.getOutputStream());
-
-//                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-//                byte[] buildBytes = in.readAllBytes();
-//                build = OtaMetadata.parseFrom(buildBytes);
-//                Log.d(TAG, "refresh: " + );
-                build = OtaMetadata.newBuilder()
-                        .setOriginalFilename("/hentai_lavender-TwistedScarlett-ota-tq1a.230205.002-Furry.02151931.zip")
-                        .setCurrentDownloadUrl("https://sfire.site/hentai_lavender-TwistedScarlett-ota-tq1a.230205.002-Furry.02151931.zip")
-                        .setChangelogUrl("https://api.sfire.site/api/changelog")
-                        .setType(OtaMetadata.OtaType.UNKNOWN)
-                        .setSizeBytes(1968969969)
-                        .setWipe(false)
-                        .setDowngrade(false)
-                        .build()
-                try {
-                    update = Utils.parseProtoUpdate(build)
-                    updateId = update!!.downloadId!!
-                    if (mUpdaterController != null) {
-                        mUpdaterController!!.addUpdate(update!!)
-                        val updatesOnline: MutableList<String?> = ArrayList()
-                        updatesOnline.add(update!!.downloadId)
-                        mUpdaterController!!.setUpdatesAvailableOnline(updatesOnline, true)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error while parsing updates proto: $e")
-                    exception = e
-                }
-            } catch (e: Exception) {
-                exception = e
-            }
-            updateCheck = false
-            if (exception != null) {
-                val page = getPage("checkForUpdates")
-                page!!.strStatus = getString(R.string.system_update_no_update_content_text)
-                renderPage("checkForUpdates")
-                return@Runnable
-            }
-            if (updateId != null && update != null) {
-                try {
-                    val urlCL = update!!.changelogUrl
-                    if (urlCL != null && !urlCL.isEmpty()) {
-                        val url = URL(urlCL)
-                        val `in` = BufferedReader(InputStreamReader(url.openStream()))
-                        val stringBuilder = StringBuilder()
-                        var input: String?
-                        while (`in`.readLine().also { input = it } != null) {
-                            stringBuilder.append(input)
-                        }
-                        `in`.close()
-                        htmlChangelog = stringBuilder.toString()
-                    } else {
-                        htmlChangelog = ""
-                    }
-                } catch (e: IOException) {
-                    Log.e(TAG, "Failed to get changelog", e)
-                    htmlChangelog = ""
-                }
-                htmlChangelog += "<br /><br />"
-                htmlChangelog += "Update size: " + Formatter.formatShortFileSize(activity, update!!.fileSize)
-                Log.d(TAG, "Saving changelog")
-                prefsEditor!!.putString("changelog", htmlChangelog).apply()
-                setUpdating(true)
-                registerPages() //Reload everything that might display the changelog
-                renderPage("updateAvailable")
-            } else {
-                renderPage("checkForUpdates")
-            }
-        }).start()
+        viewModel.refresh(Utils.getServerURL(this))
     }
 
     private val isBatteryLevelOk: Boolean
-        private get() {
+        get() {
             val intent = activity!!.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             if (!intent!!.getBooleanExtra(BatteryManager.EXTRA_PRESENT, false)) {
                 return true
@@ -863,6 +760,121 @@ class UpdatesActivity : AppCompatActivity() {
                 handler.postDelayed(resetEasterEggSteps, 1000)
             }
         }
+    }
+
+    @SuppressLint("HardwareIds")
+    private fun onMetaCollected(build: OtaMeta) {
+        if (mUpdaterController == null) {
+            Log.e(TAG, "mUpdaterController is null during update check")
+            renderPage("checkForUpdates")
+            return
+        }
+        Log.d(TAG, "Checking for updates!")
+        setUpdating(false)
+        updateCheck = true
+        renderPage("updateChecking")
+        Thread(Runnable {
+            try {
+                Thread.sleep(1500)
+
+                // Remove all current downloads
+                removeDownloads()
+//                var androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//                val earlyUpdates = prefs!!.getInt("earlyUpdates", 0)
+//                if (earlyUpdates <= 0) {
+//                    androidId = "0"
+//                }
+//                val buildTimestamp = SystemProperties.get("ro.build.date.utc").toLong()
+//                var buildIncremental: Long = 0
+//                try {
+//                    buildIncremental = SystemProperties.get("ro.build.version.incremental").toLong()
+//                } catch (e: Exception) {
+//                    Log.d(TAG, "Failed to parse ro.build.version.incremental, is this an official build?")
+//                }
+//                val request = DeviceState(
+//                        device = SystemProperties.get("ro.product.vendor.device"),
+//                        build = SystemProperties.get("ro.product.vendor.device"),
+//                        buildIncremental = buildIncremental,
+//                        timestamp = buildTimestamp,
+//                        sdkLevel = SystemProperties.get("ro.build.version.sdk"),
+//                        securityPatchLevel = SystemProperties.get("ro.build.version.security_patch"),
+//                        hwId = androidId
+//                )
+
+//                if (BuildConfig.DEBUG) {
+//                    request.clearDevice();
+//                    request.clearBuild();
+//                    request.clearTimestamp();
+//                    request.addDevice("alioth");
+//                    request.addBuild("Redmi/alioth/alioth:13/TQ1A.230205.002/23020840:user/release-keys");
+//                    request.setTimestamp(1665584742);
+//                }
+                //                urlConnection.setDoOutput(true);
+//                urlConnection.setDoInput(true);
+//                urlConnection.setRequestMethod("POST");
+//                req.writeTo(urlConnection.getOutputStream());
+
+//                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+//                byte[] buildBytes = in.readAllBytes();
+//                build = OtaMetadata.parseFrom(buildBytes);
+//                Log.d(TAG, "refresh: " + );
+
+                try {
+                    Utils.parseProtoUpdate(build).let { upd ->
+                        update = upd
+                        updateId = upd.downloadId
+                        mUpdaterController?.let { updateController ->
+                            updateController.addUpdate(upd)
+                            val updatesOnline: MutableList<String?> = ArrayList()
+                            updatesOnline.add(upd.downloadId)
+                            updateController.setUpdatesAvailableOnline(updatesOnline, true)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error while parsing updates proto: $e")
+                    exception = e
+                }
+            } catch (e: Exception) {
+                exception = e
+            }
+            updateCheck = false
+            if (exception != null) {
+                val page = getPage("checkForUpdates")
+                page!!.strStatus = getString(R.string.system_update_no_update_content_text)
+                renderPage("checkForUpdates")
+                return@Runnable
+            }
+            if (update != null) {
+                try {
+                    val urlCL = update!!.changelogUrl
+                    if (!urlCL.isEmpty()) {
+                        val url = URL(urlCL)
+                        val `in` = BufferedReader(InputStreamReader(url.openStream()))
+                        val stringBuilder = StringBuilder()
+                        var input: String?
+                        while (`in`.readLine().also { input = it } != null) {
+                            stringBuilder.append(input)
+                        }
+                        `in`.close()
+                        htmlChangelog = stringBuilder.toString()
+                    } else {
+                        htmlChangelog = ""
+                    }
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to get changelog", e)
+                    htmlChangelog = ""
+                }
+                htmlChangelog += "<br /><br />"
+                htmlChangelog += "Update size: " + Formatter.formatShortFileSize(activity, update!!.fileSize)
+                Log.d(TAG, "Saving changelog")
+                prefsEditor!!.putString("changelog", htmlChangelog).apply()
+                setUpdating(true)
+                registerPages() //Reload everything that might display the changelog
+                renderPage("updateAvailable")
+            } else {
+                renderPage("checkForUpdates")
+            }
+        }).start()
     }
 
     companion object {

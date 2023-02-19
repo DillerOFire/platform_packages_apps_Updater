@@ -28,6 +28,7 @@ import androidx.preference.PreferenceManager
 import com.android.updater.misc.BuildInfoUtils
 import com.android.updater.misc.Constants
 import com.android.updater.misc.StringGenerator
+import com.android.updater.ui.UpdatesActivity
 import java.text.DateFormat
 
 class UpdaterReceiver : BroadcastReceiver() {

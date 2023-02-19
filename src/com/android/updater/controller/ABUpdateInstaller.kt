@@ -40,11 +40,6 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
     private val mUpdateEngineCallback: UpdateEngineCallback = object : UpdateEngineCallback() {
         override fun onStatusUpdate(status: Int, percent: Float) {
             val update = mUpdaterController.getActualUpdate(mDownloadId)
-            if (update == null) {
-                // We read the id from a preference, the update could no longer exist
-                installationDone(status == UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT)
-                return
-            }
             when (status) {
                 UpdateEngine.UpdateStatusConstants.DOWNLOADING, UpdateEngine.UpdateStatusConstants.FINALIZING -> {
                     if (update.status != UpdateStatus.INSTALLING) {
@@ -52,9 +47,9 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
                         mUpdaterController.notifyUpdateChange(mDownloadId)
                     }
                     mProgress = (percent * 100).roundToInt()
-                    mUpdaterController.getActualUpdate(mDownloadId)!!.installProgress = mProgress
+                    mUpdaterController.getActualUpdate(mDownloadId).installProgress = mProgress
                     mFinalizing = status == UpdateEngine.UpdateStatusConstants.FINALIZING
-                    mUpdaterController.getActualUpdate(mDownloadId)!!.finalizing = mFinalizing
+                    mUpdaterController.getActualUpdate(mDownloadId).finalizing = mFinalizing
                     mUpdaterController.notifyInstallProgress(mDownloadId)
                 }
 
@@ -78,8 +73,8 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             if (errorCode != UpdateEngine.ErrorCodeConstants.SUCCESS) {
                 installationDone(false)
                 val update = mUpdaterController.getActualUpdate(mDownloadId)
-                update!!.installProgress = 0
-                update!!.status = UpdateStatus.INSTALLATION_FAILED
+                update.installProgress = 0
+                update.status = UpdateStatus.INSTALLATION_FAILED
                 mUpdaterController.notifyUpdateChange(mDownloadId)
             }
         }
@@ -96,10 +91,10 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             return
         }
         mDownloadId = downloadId
-        val file = mUpdaterController.getActualUpdate(mDownloadId)!!.file
+        val file = mUpdaterController.getActualUpdate(mDownloadId).file
         if (!file!!.exists()) {
             Log.e(TAG, "The given update doesn't exist")
-            mUpdaterController.getActualUpdate(downloadId)!!.status = UpdateStatus.INSTALLATION_FAILED
+            mUpdaterController.getActualUpdate(downloadId).status = UpdateStatus.INSTALLATION_FAILED
             mUpdaterController.notifyUpdateChange(downloadId)
             return
         }
@@ -124,12 +119,12 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             zipFile.close()
         } catch (e: IOException) {
             Log.e(TAG, "Could not prepare $file", e)
-            mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLATION_FAILED
+            mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLATION_FAILED
             mUpdaterController.notifyUpdateChange(mDownloadId)
             return
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "Could not prepare $file", e)
-            mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLATION_FAILED
+            mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLATION_FAILED
             mUpdaterController.notifyUpdateChange(mDownloadId)
             return
         }
@@ -137,14 +132,14 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             mBound = mUpdateEngine.bind(mUpdateEngineCallback)
             if (!mBound) {
                 Log.e(TAG, "Could not bind")
-                mUpdaterController.getActualUpdate(downloadId)!!.status = UpdateStatus.INSTALLATION_FAILED
+                mUpdaterController.getActualUpdate(downloadId).status = UpdateStatus.INSTALLATION_FAILED
                 mUpdaterController.notifyUpdateChange(downloadId)
                 return
             }
         }
         val zipFileUri = "file://" + file.absolutePath
         mUpdateEngine.applyPayload(zipFileUri, offset, 0, headerKeyValuePairs)
-        mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLING
+        mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLING
         mUpdaterController.notifyUpdateChange(mDownloadId)
         PreferenceManager.getDefaultSharedPreferences(mContext).edit()
                 .putString(PREF_INSTALLING_AB_ID, mDownloadId)
@@ -189,7 +184,7 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
         }
         mUpdateEngine.cancel()
         installationDone(false)
-        mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLATION_CANCELLED
+        mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLATION_CANCELLED
         mUpdaterController.notifyUpdateChange(mDownloadId)
     }
 
@@ -203,7 +198,7 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             return
         }
         mUpdateEngine.suspend()
-        mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLATION_SUSPENDED
+        mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLATION_SUSPENDED
         mUpdaterController.notifyUpdateChange(mDownloadId)
         PreferenceManager.getDefaultSharedPreferences(mContext).edit()
                 .putString(PREF_INSTALLING_SUSPENDED_AB_ID, mDownloadId)
@@ -220,10 +215,10 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
             return
         }
         mUpdateEngine.resume()
-        mUpdaterController.getActualUpdate(mDownloadId)!!.status = UpdateStatus.INSTALLING
+        mUpdaterController.getActualUpdate(mDownloadId).status = UpdateStatus.INSTALLING
         mUpdaterController.notifyUpdateChange(mDownloadId)
-        mUpdaterController.getActualUpdate(mDownloadId)!!.installProgress = mProgress
-        mUpdaterController.getActualUpdate(mDownloadId)!!.finalizing = mFinalizing
+        mUpdaterController.getActualUpdate(mDownloadId).installProgress = mProgress
+        mUpdaterController.getActualUpdate(mDownloadId).finalizing = mFinalizing
         mUpdaterController.notifyInstallProgress(mDownloadId)
         PreferenceManager.getDefaultSharedPreferences(mContext).edit()
                 .remove(PREF_INSTALLING_SUSPENDED_AB_ID)
@@ -235,6 +230,7 @@ internal class ABUpdateInstaller private constructor(context: Context, private v
         private const val PREF_INSTALLING_AB_ID = "installing_ab_id"
         private const val PREF_INSTALLING_SUSPENDED_AB_ID = "installing_suspended_ab_id"
         private var sInstance: ABUpdateInstaller? = null
+
         @Synchronized
         fun isInstallingUpdate(context: Context?): Boolean {
             val pref = PreferenceManager.getDefaultSharedPreferences(context!!)

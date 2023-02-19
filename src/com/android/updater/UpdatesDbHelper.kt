@@ -64,7 +64,7 @@ class UpdatesDbHelper(context: Context?) : SQLiteOpenHelper(context, DATABASE_NA
 
     fun changeUpdateStatus(update: Update) {
         val selection = UpdateEntry.COLUMN_NAME_DOWNLOAD_ID + " = ?"
-        val selectionArgs = arrayOf(update.downloadId!!)
+        val selectionArgs = arrayOf(update.downloadId)
         changeUpdateStatus(selection, selectionArgs, update.persistentStatus)
     }
 

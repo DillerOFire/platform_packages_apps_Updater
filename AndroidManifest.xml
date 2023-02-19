@@ -28,7 +28,7 @@
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name=".UpdatesActivity"
+            android:name=".ui.UpdatesActivity"
             android:excludeFromRecents="true"
             android:label="@string/display_name"
             android:exported="true"

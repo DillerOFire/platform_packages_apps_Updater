@@ -25,7 +25,7 @@ open class UpdateBase : UpdateBaseInfo {
     override var fileSize: Long = 0
     override var changelogUrl: String = ""
 
-    constructor() {}
+    constructor()
     constructor(update: UpdateBaseInfo) {
         name = update.name
         downloadUrl = update.downloadUrl

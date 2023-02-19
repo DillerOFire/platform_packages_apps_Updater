@@ -29,7 +29,7 @@ class Update : UpdateBase, UpdateInfo {
     override var availableOnline = false
     override var finalizing = false
 
-    constructor() {}
+    constructor()
     constructor(update: UpdateInfo) : super(update) {
         status = update.status
         persistentStatus = update.persistentStatus

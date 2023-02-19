@@ -32,8 +32,8 @@ buildscript {
 
     dependencies {
         classpath 'com.android.tools.build:gradle:7.3.1'
-        classpath "com.google.protobuf:protobuf-gradle-plugin:0.9.1"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
 }
 
@@ -42,34 +42,8 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 apply plugin: 'com.android.application'
-apply plugin: "com.google.protobuf"
 apply plugin: 'org.jetbrains.kotlin.android'
-
-protobuf {
-    protoc {
-        // You still need protoc like in the non-Android case
-        artifact = 'com.google.protobuf:protoc:3.0.0'
-    }
-    plugins {
-        javalite {
-            // The codegen for lite comes as a separate artifact
-            artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
-        }
-    }
-    generateProtoTasks.generatedFilesBaseDir = 'gen-src'
-    generateProtoTasks {
-        all().each { task ->
-            task.builtins {
-                // In most cases you don't need the full Java output
-                // if you use the lite output.
-                remove java
-            }
-            task.plugins {
-                javalite { }
-            }
-        }
-    }
-}
+apply plugin: 'kotlinx-serialization'
 
 android {
     compileSdkVersion 33
@@ -83,8 +57,7 @@ android {
         main {
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
-            java.srcDirs = ['src', 'gen-src']
-            proto.srcDirs = ['src']
+            java.srcDirs = ['src']
             manifest.srcFile 'AndroidManifest.xml'
         }
     }
@@ -133,5 +106,14 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
-    implementation 'com.google.protobuf:protobuf-lite:3.0.0'
+
+    implementation("io.ktor:ktor-client-core:2.2.3")
+    implementation("io.ktor:ktor-client-cio:2.2.3")
+    implementation("io.ktor:ktor-client-content-negotiation:2.2.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-protobuf:2.2.3")
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+    implementation 'androidx.fragment:fragment-ktx:1.5.5'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.1'
 }

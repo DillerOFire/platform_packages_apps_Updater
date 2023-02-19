@@ -79,7 +79,7 @@ internal class UpdateInstaller private constructor(context: Context, controller:
             RecoverySystem.installPackage(mContext, update)
         } catch (e: IOException) {
             Log.e(TAG, "Could not install update", e)
-            mUpdaterController.getActualUpdate(downloadId)!!.status = UpdateStatus.INSTALLATION_FAILED
+            mUpdaterController.getActualUpdate(downloadId).status = UpdateStatus.INSTALLATION_FAILED
             mUpdaterController.notifyUpdateChange(downloadId)
         }
     }
@@ -157,6 +157,7 @@ internal class UpdateInstaller private constructor(context: Context, controller:
         private const val TAG = "UpdateInstaller"
         private var sInstance: UpdateInstaller? = null
         private var sInstallingUpdate: String? = null
+
         @Synchronized
         fun getInstance(context: Context,
                         updaterController: UpdaterController): UpdateInstaller {

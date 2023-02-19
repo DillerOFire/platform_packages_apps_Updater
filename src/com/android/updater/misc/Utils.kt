@@ -30,26 +30,40 @@ import androidx.preference.PreferenceManager
 import com.android.updater.R
 import com.android.updater.UpdatesDbHelper
 import com.android.updater.controller.UpdaterService
+import com.android.updater.model.OtaMeta
 import com.android.updater.model.Update
 import com.android.updater.model.UpdateBaseInfo
 import com.android.updater.model.UpdateInfo
-import com.android.updater.protos.OtaMetadata
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.protobuf.protobuf
+import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipFile
 
 object Utils {
     private const val TAG = "Utils"
+
+    @OptIn(ExperimentalSerializationApi::class)
+    val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            protobuf()
+        }
+    }
+
     fun getDownloadPath(context: Context): File {
         return File(context.getString(R.string.download_path))
     }
 
-    fun parseProtoUpdate(build: OtaMetadata?): UpdateInfo {
+    fun parseProtoUpdate(build: OtaMeta): UpdateInfo {
         val update = Update()
-        val postDeviceState = build!!.postcondition
+        //TODO:
+//        val postDeviceState = build!!.postcondition
         update.name = build.originalFilename
         update.downloadId = build.originalFilename
-        update.type = build.type.number
+        update.type = build.type.ordinal
         update.fileSize = build.sizeBytes
         update.downloadUrl = build.currentDownloadUrl
         update.changelogUrl = build.changelogUrl
