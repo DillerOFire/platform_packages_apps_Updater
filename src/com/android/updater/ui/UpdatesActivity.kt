@@ -20,16 +20,10 @@ import android.os.StrictMode
 import android.os.SystemProperties
 import android.os.UpdateEngine
 import android.os.UpdateEngineCallback
-import android.provider.Settings
 import android.text.format.Formatter
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.webkit.WebView
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -39,26 +33,35 @@ import com.android.updater.R
 import com.android.updater.controller.UpdaterController
 import com.android.updater.controller.UpdaterService
 import com.android.updater.controller.UpdaterService.LocalBinder
+import com.android.updater.databinding.PageUpdatesBinding
 import com.android.updater.misc.BuildInfoUtils
 import com.android.updater.misc.StringGenerator
 import com.android.updater.misc.Utils
-import com.android.updater.model.DeviceState
 import com.android.updater.model.OtaMeta
 import com.android.updater.model.UpdateInfo
 import com.android.updater.model.UpdateStatus
-import kotlinx.coroutines.flow.distinctUntilChanged
+import com.android.updater.repos.CHANGELOG
+import com.android.updater.repos.DataStoreRepository
+import com.android.updater.repos.EARLY_UPDATES
+import com.android.updater.repos.PAGE_ID
+import com.android.updater.repos.PROG_PERCENT
+import com.android.updater.repos.PROG_STEP
+import com.android.updater.repos.UPDATING
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
+import kotlin.math.roundToInt
 
 class UpdatesActivity : AppCompatActivity() {
+
+    lateinit var binding: PageUpdatesBinding
     private var exception: Exception? = null
     private var activity: UpdatesActivity? = null
-    private var prefs: SharedPreferences? = null
-    private var prefsEditor: SharedPreferences.Editor? = null
+
+    private lateinit var prefsRepo: DataStoreRepository
 
     //Updates viewModel
     private val viewModel: UpdatesViewModel by viewModels()
@@ -67,17 +70,7 @@ class UpdatesActivity : AppCompatActivity() {
     private val pages = HashMap<String?, Page?>()
 
     //Layout to render the pages to
-    var pageIdActive: String? = ""
-    var headerIcon: ImageView? = null
-    var headerTitle: TextView? = null
-    var headerStatus: TextView? = null
-    var btnPrimary: Button? = null
-    var btnSecondary: Button? = null
-    var btnExtra: Button? = null
-    var progressText: TextView? = null
-    var progressBar: ProgressBar? = null
-    var webView: WebView? = null
-    var htmlContentLast = ""
+    var pageIdActive: String = ""
 
     //Special details
     private var mHandler: Handler? = null
@@ -99,7 +92,7 @@ class UpdatesActivity : AppCompatActivity() {
     private var mUpdateEngine: UpdateEngine? = null
     private var mUpdateEngineCallback: UpdateEngineCallback? = null
     fun getPage(pageId: String?): Page? {
-        //Log.d(TAG, "Get page: " + pageId);
+        Log.d(TAG, "Get page: " + pageId);
         return pages[pageId]
     }
 
@@ -114,7 +107,7 @@ class UpdatesActivity : AppCompatActivity() {
                 //Log.d(TAG, "UpdateController not updating checking current page: " + pageId);
                 if (pageId == "updateInstalling" || pageId == "updateInstallingPaused" || pageId == "updateInstalled") {
                     Log.d(TAG, "Invalid state detected, returning to initial page")
-                    prefsEditor!!.clear().apply() // Clear the preferences editor
+                    prefsRepo.clear() // Clear the preferences editor
                     pageId = "checkForUpdates" // Set the page id to "updateChecking"
                 }
             }
@@ -135,11 +128,11 @@ class UpdatesActivity : AppCompatActivity() {
         pageIdActive = pageId
         if (pageIdActive == "error" || pageIdActive == "checkForUpdates" || pageIdActive == "updateAvailable" || pageIdActive == "updateChecking" || pageIdActive != "enrollEarlyUpdates") {
             //Log.d(TAG, "Saving pageId " + pageIdActive);
-            prefsEditor!!.putString("pageId", pageIdActive).apply()
+            prefsRepo.putString(PAGE_ID, pageIdActive)
         }
         val finalPage = page // Make page final to use it in the runOnUiThread
         runOnUiThread {
-            finalPage.render(this)
+            finalPage.render(this, viewModel::htmlContentEqual)
             if (!finalPage.runnableRan) {
                 finalPage.runnableRan = true
                 val thread = Thread(finalPage.runnable)
@@ -153,14 +146,14 @@ class UpdatesActivity : AppCompatActivity() {
         val page = getPage(pageId)
         if (progress < 0) {
             progress = 1
-            progressBar!!.isIndeterminate = true
+            binding.progressBar.isIndeterminate = true
         } else {
-            progressBar!!.isIndeterminate = false
+            binding.progressBar.isIndeterminate = false
         }
         page!!.progPercent = progress
         page.progStep = progressStep!!
-        prefsEditor!!.putInt("progPercent", page.progPercent).apply()
-        prefsEditor!!.putString("progStep", page.progStep).apply()
+        prefsRepo.putInt(PROG_PERCENT, page.progPercent)
+        prefsRepo.putString(PROG_STEP, page.progStep)
         renderPage(pageId)
     }
 
@@ -168,7 +161,7 @@ class UpdatesActivity : AppCompatActivity() {
         val page = getPage(pageId)
         page!!.progPercent = 1
         page.progStep = progressStep!!
-        progressBar!!.isIndeterminate = true
+        binding.progressBar.isIndeterminate = true
         renderPage(pageId)
 
         // Create a new handler if it doesn't exist yet
@@ -203,24 +196,28 @@ class UpdatesActivity : AppCompatActivity() {
 
     //A helpful wrapper that refreshes all of our pages for major content updates
     private fun registerPages() {
-        registerPage("error", pageError())
-        registerPage("checkForUpdates", pageCheckForUpdates())
-        registerPage("updateChecking", pageUpdateChecking())
-        registerPage("updateAvailable", pageUpdateAvailable())
-        registerPage("updateStarting", pageUpdateStarting())
-        registerPage("updateDownloading", pageUpdateDownloading())
-        registerPage("updatePaused", pageUpdatePaused())
-        registerPage("updateRetryDownload", pageUpdateRetryDownload())
-        registerPage("updateInstalling", pageUpdateInstalling())
-        registerPage("updateInstallingPaused", pageUpdateInstallingPaused())
-        registerPage("updateInstalled", pageUpdateInstalled())
-        registerPage("updateInstallFailed", pageUpdateInstallFailed())
-        registerPage("enrollEarlyUpdates", pageEarlyUpdates())
+        lifecycleScope.launch {
+            registerPage("error", pageError())
+            registerPage("checkForUpdates", pageCheckForUpdates())
+            registerPage("updateChecking", pageUpdateChecking())
+            registerPage("updateAvailable", pageUpdateAvailable())
+            registerPage("updateStarting", pageUpdateStarting())
+            registerPage("updateDownloading", pageUpdateDownloading())
+            registerPage("updatePaused", pageUpdatePaused())
+            registerPage("updateRetryDownload", pageUpdateRetryDownload())
+            registerPage("updateInstalling", pageUpdateInstalling())
+            registerPage("updateInstallingPaused", pageUpdateInstallingPaused())
+            registerPage("updateInstalled", pageUpdateInstalled())
+            registerPage("updateInstallFailed", pageUpdateInstallFailed())
+            registerPage("enrollEarlyUpdates", pageEarlyUpdates())
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.page_updates)
+        binding = PageUpdatesBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         //Allow doing stupid things like running network operations on the main activity thread
@@ -235,20 +232,9 @@ class UpdatesActivity : AppCompatActivity() {
                 getString(R.string.header_build_date, StringGenerator.getDateLocalizedUTC(this,
                         DateFormat.LONG, BuildInfoUtils.buildDateTimestamp)))
         activity = this
-        headerIcon = findViewById(R.id.header_icon)
-        headerTitle = findViewById(R.id.header_title)
-        headerStatus = findViewById(R.id.header_status)
-        btnPrimary = findViewById(R.id.btn_primary)
-        btnSecondary = findViewById(R.id.btn_secondary)
-        btnExtra = findViewById(R.id.btn_extra)
-        webView = findViewById(R.id.webview)
-        progressText = findViewById(R.id.progress_text)
-        progressBar = findViewById(R.id.progress_bar)
-        headerIcon?.setOnClickListener { v: View? -> easterEgg() }
+        binding.headerIcon.setOnClickListener { easterEgg() }
 
-        //Allow using shared preferences
-        prefs = PreferenceManager.getDefaultSharedPreferences(activity!!)
-        prefsEditor = prefs?.edit()
+        prefsRepo =  DataStoreRepository(applicationContext)
 
         //Load shared preferences
         //TODO:
@@ -282,29 +268,33 @@ class UpdatesActivity : AppCompatActivity() {
             }
 
             override fun onStatusUpdate(status: Int, percent: Float) {
-                when (status) {
-                    UpdateEngine.UpdateStatusConstants.DOWNLOADING -> {
-                        installingUpdate = true
-                        Log.d(TAG, "UpdateEngine: DOWNLOADING")
-                        pageIdActive = prefs?.getString("pageId", "")
-                        if (pageIdActive != "updateInstallingPaused") {
-                            renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_installing_title_text))
+                lifecycleScope.launch {
+                    when (status) {
+                        UpdateEngine.UpdateStatusConstants.DOWNLOADING -> {
+                            installingUpdate = true
+                            Log.d(TAG, "UpdateEngine: DOWNLOADING")
+                            pageIdActive = prefsRepo.getString(PAGE_ID, "")
+                            if (pageIdActive != "updateInstallingPaused") {
+                                renderPageProgress("updateInstalling",
+                                    (percent * 100).roundToInt(), getString(R.string.system_update_installing_title_text))
+                            }
                         }
-                    }
 
-                    UpdateEngine.UpdateStatusConstants.FINALIZING -> {
-                        installingUpdate = true
-                        Log.d(TAG, "UpdateEngine: FINALIZING")
-                        pageIdActive = prefs?.getString("pageId", "")
-                        if (pageIdActive != "updateInstallingPaused") {
-                            renderPageProgress("updateInstalling", Math.round(percent * 100), getString(R.string.system_update_optimizing_apps))
+                        UpdateEngine.UpdateStatusConstants.FINALIZING -> {
+                            installingUpdate = true
+                            Log.d(TAG, "UpdateEngine: FINALIZING")
+                            pageIdActive = prefsRepo.getString(PAGE_ID, "")
+                            if (pageIdActive != "updateInstallingPaused") {
+                                renderPageProgress("updateInstalling",
+                                    (percent * 100).roundToInt(), getString(R.string.system_update_optimizing_apps))
+                            }
                         }
-                    }
 
-                    UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT -> {
-                        installingUpdate = true
-                        Log.d(TAG, "UpdateEngine: UPDATED_NEED_REBOOT")
-                        renderPage("updateInstalled")
+                        UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT -> {
+                            installingUpdate = true
+                            Log.d(TAG, "UpdateEngine: UPDATED_NEED_REBOOT")
+                            renderPage("updateInstalled")
+                        }
                     }
                 }
             }
@@ -354,22 +344,36 @@ class UpdatesActivity : AppCompatActivity() {
                         else -> {}
                     }
                 } else if (UpdaterController.ACTION_DOWNLOAD_PROGRESS == intent.action) {
-                    registerPage("updateDownloading", pageUpdateDownloading())
-                    val percentage = NumberFormat.getPercentInstance().format((update!!.progress / 100f).toDouble())
-                    val progStep = percentage + " • " + getString(R.string.system_update_system_update_downloading_title_text)
-                    if (pageIdActive == "updateDownloading") renderPageProgress("updateDownloading", update!!.progress, progStep)
-                } else if (UpdaterController.ACTION_INSTALL_PROGRESS == intent.action) {
-                    registerPage("updateInstalling", pageUpdateInstalling())
-                    var progStep = getString(R.string.system_update_prepare_install)
-                    if (mUpdaterController!!.isInstallingABUpdate) {
-                        progStep = if (update!!.finalizing) {
-                            getString(R.string.system_update_optimizing_apps)
-                        } else {
-                            getString(R.string.system_update_installing_title_text)
-                        }
+                    lifecycleScope.launch {
+                        registerPage("updateDownloading", pageUpdateDownloading())
+                        val percentage = NumberFormat.getPercentInstance()
+                            .format((update!!.progress / 100f).toDouble())
+                        val progStep =
+                            percentage + " • " + getString(R.string.system_update_system_update_downloading_title_text)
+                        if (pageIdActive == "updateDownloading") renderPageProgress(
+                            "updateDownloading",
+                            update!!.progress,
+                            progStep
+                        )
                     }
-                    if (pageIdActive == "updateInstalling") renderPageProgress("updateInstalling", update!!.installProgress, progStep)
-                } else if (UpdaterController.Companion.ACTION_UPDATE_REMOVED == intent.action) {
+                } else if (UpdaterController.ACTION_INSTALL_PROGRESS == intent.action) {
+                    lifecycleScope.launch {
+                        registerPage("updateInstalling", pageUpdateInstalling())
+                        var progStep = getString(R.string.system_update_prepare_install)
+                        if (mUpdaterController!!.isInstallingABUpdate) {
+                            progStep = if (update!!.finalizing) {
+                                getString(R.string.system_update_optimizing_apps)
+                            } else {
+                                getString(R.string.system_update_installing_title_text)
+                            }
+                        }
+                        if (pageIdActive == "updateInstalling") renderPageProgress(
+                            "updateInstalling",
+                            update!!.installProgress,
+                            progStep
+                        )
+                    }
+                } else if (UpdaterController.ACTION_UPDATE_REMOVED == intent.action) {
                     renderPage("checkForUpdates")
                 } else {
                     val page = getPage("error")
@@ -378,20 +382,23 @@ class UpdatesActivity : AppCompatActivity() {
                 }
             }
         }
-        wasUpdating = prefs!!.getBoolean("updating", false)
-        //Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
-        if (!installingUpdate) {
-            pageIdActive = prefs!!.getString("pageId", "")
-            if (pageIdActive == "") {
-                pageIdActive = "updateChecking"
-            } else if (!installingUpdate) {
-                pageIdActive = "updateChecking"
-            } else if (!wasUpdating && pageIdActive == "updateAvailable") {
-                pageIdActive = "checkForUpdates" //Check for updates on next start!
+
+        lifecycleScope.launchWhenCreated {
+            wasUpdating = prefsRepo.getBoolean(UPDATING, true)
+            //Log.d(TAG, "Loading wasUpdating: " + wasUpdating);
+            if (!installingUpdate) {
+                pageIdActive = prefsRepo.getString(PAGE_ID, "")
+                if (pageIdActive == "") {
+                    pageIdActive = "updateChecking"
+                } else if (!installingUpdate) {
+                    pageIdActive = "updateChecking"
+                } else if (!wasUpdating && pageIdActive == "updateAvailable") {
+                    pageIdActive = "checkForUpdates" //Check for updates on next start!
+                }
             }
+            Log.d(TAG, "Loading pageId $pageIdActive")
+            htmlChangelog = prefsRepo.getString(CHANGELOG, "")
         }
-        Log.d(TAG, "Loading pageId $pageIdActive")
-        htmlChangelog = prefs!!.getString("changelog", "").orEmpty()
         //Log.d(TAG, "Loading changelog: " + htmlChangelog);
 
         //Import and fill in the pages for the first time
@@ -410,8 +417,10 @@ class UpdatesActivity : AppCompatActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.metadata
                 .collect { meta ->
-                if (meta != null)
+                if (meta != null) {
+                    Log.d(TAG, "Meta Collected")
                     onMetaCollected(meta)
+                }
                 else {
                     Log.d(TAG, "Meta is null")
                     renderPage("checkForUpdates")
@@ -477,7 +486,7 @@ class UpdatesActivity : AppCompatActivity() {
         return page
     }
 
-    private fun pageUpdateDownloading(): Page {
+    private suspend fun pageUpdateDownloading(): Page {
         val page = Page()
         page.icon = R.drawable.ic_system_update_dl
         page.strStatus = getString(R.string.system_update_installing_title_text)
@@ -485,8 +494,8 @@ class UpdatesActivity : AppCompatActivity() {
         page.btnPrimaryClickListener = View.OnClickListener { v: View? -> downloadPause() }
         page.btnExtraText = getString(R.string.system_update_countdown_cancel_button)
         page.btnExtraClickListener = View.OnClickListener { v: View? -> downloadCancel() }
-        page.progPercent = prefs!!.getInt("progPercent", 0)
-        page.progStep = prefs!!.getString("progStep", "")!!
+        page.progPercent = prefsRepo.getInt(PROG_PERCENT, 0)
+        page.progStep = prefsRepo.getString(PROG_STEP, "")
         page.htmlContent = htmlChangelog
         page.htmlColor = htmlColor
         return page
@@ -521,12 +530,12 @@ class UpdatesActivity : AppCompatActivity() {
         return page
     }
 
-    private fun pageUpdateInstalling(): Page {
+    private suspend fun pageUpdateInstalling(): Page {
         val page = Page()
         page.icon = R.drawable.ic_system_update_dl
         page.strStatus = getString(R.string.system_update_installing_title_text)
-        page.progPercent = prefs!!.getInt("progPercent", 0)
-        page.progStep = prefs!!.getString("progStep", "")!!
+        page.progPercent = prefsRepo.getInt(PROG_PERCENT, 0)
+        page.progStep = prefsRepo.getString(PROG_STEP, "")
         if (Utils.isABDevice) {
             page.btnExtraText = getString(R.string.system_update_download_pause_button)
             page.btnExtraClickListener = View.OnClickListener { v: View? -> installPause() }
@@ -536,10 +545,10 @@ class UpdatesActivity : AppCompatActivity() {
         return page
     }
 
-    private fun pageUpdateInstallingPaused(): Page {
+    private suspend fun pageUpdateInstallingPaused(): Page {
         val page = Page()
         page.icon = R.drawable.ic_system_update_dl
-        page.progPercent = prefs!!.getInt("progPercent", 0)
+        page.progPercent = prefsRepo.getInt(PROG_PERCENT, 0)
         page.progStep = getString(R.string.system_update_notification_title_update_paused)
         page.strStatus = getString(R.string.system_update_installing_title_text)
         page.btnExtraText = getString(R.string.system_update_download_resume_button)
@@ -577,12 +586,12 @@ class UpdatesActivity : AppCompatActivity() {
         page.strStatus = getString(R.string.system_update_enroll_early_release)
         page.btnPrimaryText = getString(R.string.system_update_enroll_early_release_accept_button)
         page.btnPrimaryClickListener = View.OnClickListener { v: View? ->
-            prefsEditor!!.putInt("earlyUpdates", 1).apply()
+            prefsRepo.putBoolean(EARLY_UPDATES, true)
             renderPage("checkForUpdates")
         }
         page.btnExtraText = getString(R.string.system_update_enroll_early_release_reject_button)
         page.btnExtraClickListener = View.OnClickListener { v: View? ->
-            prefsEditor!!.putInt("earlyUpdates", 0).apply()
+            prefsRepo.putBoolean(EARLY_UPDATES, false)
             renderPage("checkForUpdates")
         }
         page.htmlContent = getString(R.string.system_update_enroll_early_release_terms)
@@ -636,16 +645,21 @@ class UpdatesActivity : AppCompatActivity() {
         }
 
     private fun download() {
-        if (isBatteryLevelOk) {
-            //Reset the page entirely
-            registerPage("updateDownloading", pageUpdateDownloading())
-            renderPage("updateDownloading")
-            renderPageProgress("updateDownloading", -1, "")
-            Log.d(TAG, "Starting download!")
-            setUpdating(true)
-            mUpdaterController!!.startDownload(updateId)
-        } else {
-            renderPageBatteryCheck("updateAvailable", getString(R.string.system_update_battery_low))
+        lifecycleScope.launch {
+            if (isBatteryLevelOk) {
+                //Reset the page entirely
+                registerPage("updateDownloading", pageUpdateDownloading())
+                renderPage("updateDownloading")
+                renderPageProgress("updateDownloading", -1, "")
+                Log.d(TAG, "Starting download!")
+                setUpdating(true)
+                mUpdaterController!!.startDownload(updateId)
+            } else {
+                renderPageBatteryCheck(
+                    "updateAvailable",
+                    getString(R.string.system_update_battery_low)
+                )
+            }
         }
     }
 
@@ -654,9 +668,9 @@ class UpdatesActivity : AppCompatActivity() {
         setUpdating(false)
         mUpdaterController!!.pauseDownload(updateId)
         mUpdaterController!!.deleteUpdate(updateId)
-        prefsEditor!!.putString("pageId", "").apply()
-        prefsEditor!!.putInt("progPercent", 0).apply()
-        prefsEditor!!.putString("progStep", "").apply()
+        prefsRepo.putString(PAGE_ID, "")
+        prefsRepo.putInt(PROG_PERCENT, 0)
+        prefsRepo.putString(PROG_STEP, "")
         renderPage("updateAvailable")
         refresh()
     }
@@ -665,18 +679,20 @@ class UpdatesActivity : AppCompatActivity() {
         Log.d(TAG, "Pausing download!")
         setUpdating(true)
         registerPage("updatePaused", pageUpdatePaused())
-        progressBar!!.isIndeterminate = true
+        binding.progressBar.isIndeterminate = true
         renderPage("updatePaused")
         mUpdaterController!!.pauseDownload(updateId)
     }
 
     private fun downloadResume() {
-        Log.d(TAG, "Resuming download!")
-        setUpdating(true)
-        registerPage("updateDownloading", pageUpdateDownloading())
-        progressBar!!.isIndeterminate = false
-        renderPage("updateDownloading")
-        mUpdaterController!!.resumeDownload(updateId)
+        lifecycleScope.launch {
+            Log.d(TAG, "Resuming download!")
+            setUpdating(true)
+            registerPage("updateDownloading", pageUpdateDownloading())
+            binding.progressBar.isIndeterminate = false
+            renderPage("updateDownloading")
+            mUpdaterController!!.resumeDownload(updateId)
+        }
     }
 
     private fun install() {
@@ -689,7 +705,7 @@ class UpdatesActivity : AppCompatActivity() {
     private fun installPause() {
         Log.d(TAG, "Pausing update installation!")
         setUpdating(true)
-        progressBar!!.isIndeterminate = true
+        binding.progressBar.isIndeterminate = true
         renderPage("updateInstallingPaused")
         mUpdateEngine!!.suspend()
     }
@@ -697,7 +713,7 @@ class UpdatesActivity : AppCompatActivity() {
     private fun installResume() {
         Log.d(TAG, "Resuming update installation!")
         setUpdating(true)
-        progressBar!!.isIndeterminate = false
+        binding.progressBar.isIndeterminate = false
         renderPage("updateInstalling")
         mUpdateEngine!!.resume()
     }
@@ -711,8 +727,8 @@ class UpdatesActivity : AppCompatActivity() {
 
     private fun setUpdating(updating: Boolean) {
         wasUpdating = updating
-        //Log.d(TAG, "Set updating: " + updating);
-        prefsEditor!!.putBoolean("updating", updating).apply()
+        Log.d(TAG, "Set updating: $updating");
+        prefsRepo.putBoolean(UPDATING, updating)
     }
 
     public override fun onStart() {
@@ -734,8 +750,8 @@ class UpdatesActivity : AppCompatActivity() {
             unbindService(mConnection)
         }
 
-        //Log.d(TAG, "Committing preferences before close");
-        prefsEditor!!.apply() //Make sure we commit preferences no matter what
+        // TODO: Commit prefs
+        Log.d(TAG, "Committing preferences before close. TODO");
         super.onDestroy()
     }
 
@@ -872,9 +888,10 @@ class UpdatesActivity : AppCompatActivity() {
                     htmlChangelog = ""
                 }
                 htmlChangelog += "<br /><br />"
-                htmlChangelog += "Update size: " + Formatter.formatShortFileSize(activity, update!!.fileSize)
+                htmlChangelog += "Update size: " +
+                        Formatter.formatShortFileSize(activity, update!!.fileSize)
                 Log.d(TAG, "Saving changelog")
-                prefsEditor!!.putString("changelog", htmlChangelog).apply()
+                prefsRepo.putString(CHANGELOG, htmlChangelog)
                 setUpdating(true)
                 registerPages() //Reload everything that might display the changelog
                 renderPage("updateAvailable")

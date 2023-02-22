@@ -86,6 +86,11 @@ android {
         jvmTarget = "1.8"
     }
 
+
+    buildFeatures {
+        viewBinding true
+    }
+
     buildTypes {
         release {
             signingConfig signingConfigs.release
@@ -110,6 +115,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
 
     implementation("io.ktor:ktor-client-core:2.2.3")
     implementation("io.ktor:ktor-client-cio:2.2.3")
